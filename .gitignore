@@ -1,0 +1,31 @@
+@"
+# Frontend Vue
+front-salah-main/node_modules/
+front-salah-main/dist/
+front-salah-main/.vite/
+
+# Backend Go
+backend-salah-main/tmp/
+backend-salah-main/bin/
+backend-salah-main/*.exe
+backend-salah-main/*.test
+backend-salah-main/*.out
+
+# Variables privadas
+.env
+.env.*
+backend-salah-main/.env
+front-salah-main/.env
+
+# Carpetas que no pertenecen al proyecto
+.agents/
+.idea/
+.tmp/
+
+# Archivos adicionales
+*.zip
+*.pdf
+*.log
+Thumbs.db
+.DS_Store
+"@ | Set-Content -Encoding UTF8 .gitignore

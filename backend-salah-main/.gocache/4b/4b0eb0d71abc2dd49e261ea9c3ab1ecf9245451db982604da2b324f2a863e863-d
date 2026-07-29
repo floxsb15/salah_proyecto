@@ -1,0 +1,11 @@
+./barcode.go
+./cell.go
+./color.go
+./font.go
+./line.go
+./page.go
+./proportion.go
+./props.go
+./rect.go
+./signature.go
+./text.go

@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import 'primeicons/primeicons.css';
+
+body {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.category-title {
+  font-weight: 600;
+  font-size: 1.5rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.product-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.product-name {
+  font-weight: 500;
+  font-size: 1.125rem;
+}
+
+.product-description {
+  font-weight: 300;
+  font-size: 0.875rem;
+}
+
+.product-price {
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+
+.status-disponible {
+  background-color: #dcfce7; /* green-100 */
+  color: #166534; /* green-800 */
+}
+
+.status-ocupado {
+  background-color: #fee2e2; /* red-100 */
+  color: #991b1b; /* red-800 */
+}

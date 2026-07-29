@@ -1,0 +1,11 @@
+# enviroments
+.env
+
+# files for cache
+tmp
+
+# files on images/vehiculos
+internal/images/vehiculos/*
+!internal/images/vehiculos/
+
+.air.toml
