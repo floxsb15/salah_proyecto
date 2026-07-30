@@ -1,8 +1,0 @@
-./categoria_vehiculo.controller.go
-./cliente.controller.go
-./compra_vehiculo.controller.go
-./gastos.controller.go
-./login.controller.go
-./movimientos.controller.go
-./usuario.controller.go
-./vehiculo.controller.go

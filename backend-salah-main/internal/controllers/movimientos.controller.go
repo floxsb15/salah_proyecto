@@ -44,7 +44,7 @@ func AgregarMovimiento(w http.ResponseWriter, r *http.Request) {
 	var movimiento NewMovimiento
 
 	if err := json.NewDecoder(r.Body).Decode(&movimiento); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 

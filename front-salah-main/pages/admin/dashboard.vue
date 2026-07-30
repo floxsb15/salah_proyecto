@@ -268,7 +268,7 @@ async function cargarDashboard() {
     const [resUsuarios, resClientes, resVehiculos, resVentas] = await Promise.all([
       $fetch(server.HOST + '/api/v1/usuarios', { method: 'GET' }),
       $fetch(server.HOST + '/api/v1/clientes', { method: 'GET' }),
-      $fetch(server.HOST + '/api/v1/vehiculos', { method: 'GET', headers: getAuthHeaders() }),
+      $fetch(server.HOST + '/api/v1/vehiculos', { method: 'GET' }),
       $fetch(server.HOST + '/api/v1/ventas', { method: 'GET' })
     ]);
 
@@ -281,19 +281,6 @@ async function cargarDashboard() {
     toast.add({ severity: 'error', summary: 'Error al cargar dashboard', life: 3000 });
   } finally {
     loading.value = false;
-  }
-}
-
-function getAuthHeaders() {
-  try {
-    const user = localStorage.getItem('user');
-    const parsed = user ? JSON.parse(user) : null;
-    const headers: Record<string, string> = {};
-    if (parsed?.token) headers.Authorization = `Bearer ${parsed.token}`;
-    if (parsed?.id) headers['X-User-Id'] = String(parsed.id);
-    return headers;
-  } catch {
-    return {};
   }
 }
 

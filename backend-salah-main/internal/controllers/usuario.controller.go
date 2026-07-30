@@ -5,13 +5,12 @@ import (
 	"backend-restaurant-delitto/internal/functions"
 	"backend-restaurant-delitto/internal/models"
 	"backend-restaurant-delitto/internal/querys"
+	"backend-restaurant-delitto/internal/security"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
@@ -27,7 +26,7 @@ type UsuarioDAO struct {
 	Direccion string `json:"direccion"`
 	Foto      string `json:"foto"`
 	Usuario   string `json:"usuario"`
-	Contra    string `json:"contra"`
+	Contra    string `json:"-"`
 	Estado    string `json:"estado"`
 	Rol       string `json:"rol"`
 }
@@ -47,16 +46,7 @@ type UsuarioModificado struct {
 
 // validatePassword checks if the password meets the criteria
 func validatePassword(password string) bool {
-	if len(password) < 8 {
-		return false
-	}
-	if !regexp.MustCompile(`[a-zA-Z]`).MatchString(password) {
-		return false
-	}
-	if !regexp.MustCompile(`[0-9]`).MatchString(password) {
-		return false
-	}
-	return true
+	return len(password) >= 12
 }
 
 func ObtenerUsuarios(w http.ResponseWriter, r *http.Request) {
@@ -130,16 +120,21 @@ func AgregarUsuario(w http.ResponseWriter, r *http.Request) {
 		file, handler, err := r.FormFile("foto")
 		if err == nil {
 			defer file.Close()
+			extension, validationErr := validateImageUpload(handler, maxUserPhotoSize)
+			if validationErr != nil {
+				http.Error(w, validationErr.Error(), http.StatusBadRequest)
+				return
+			}
 
-			if err := os.MkdirAll("internal/images/usuarios", os.ModePerm); err != nil {
+			if err := os.MkdirAll("internal/images/usuarios", 0750); err != nil {
 				http.Error(w, "Error al preparar la carpeta de fotos", http.StatusInternalServerError)
 				return
 			}
 
-			nombreImagen := fmt.Sprintf("usuario-%s%s", uuid.New().String(), filepath.Ext(handler.Filename))
+			nombreImagen := fmt.Sprintf("usuario-%s%s", uuid.New().String(), extension)
 			rutaImagen := "internal/images/usuarios/" + nombreImagen
 
-			outFile, err := os.Create(rutaImagen)
+			outFile, err := createUploadFile(rutaImagen)
 			if err != nil {
 				http.Error(w, "Error al guardar la foto", http.StatusInternalServerError)
 				return
@@ -153,20 +148,31 @@ func AgregarUsuario(w http.ResponseWriter, r *http.Request) {
 
 			direccionImagen = rutaImagen
 		} else if err != http.ErrMissingFile {
-			http.Error(w, "Error al obtener la foto: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Foto no valida", http.StatusBadRequest)
 			return
 		}
 		usuario.Foto = direccionImagen
 	} else {
-		if err := json.NewDecoder(r.Body).Decode(&usuario); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		var payload struct {
+			UsuarioDAO
+			Contra string `json:"contra"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 			return
 		}
+		usuario = payload.UsuarioDAO
+		usuario.Contra = payload.Contra
 	}
 
 	// Validate password
 	if !validatePassword(usuario.Contra) {
-		http.Error(w, "La contraseña debe tener al menos 8 caracteres, incluyendo letras y números.", http.StatusBadRequest)
+		http.Error(w, "La contraseña debe tener al menos 12 caracteres.", http.StatusBadRequest)
+		return
+	}
+	hashedPassword, err := security.HashPassword(usuario.Contra)
+	if err != nil {
+		http.Error(w, "No se pudo proteger la contraseña", http.StatusInternalServerError)
 		return
 	}
 
@@ -177,21 +183,22 @@ func AgregarUsuario(w http.ResponseWriter, r *http.Request) {
 	}
 	nuevoRol, err := functions.ActualizarRol(usuario.Rol)
 	if err != nil {
-		http.Error(w, "Rol no valido:"+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Rol no valido", http.StatusBadRequest)
 		return
 	}
 
 	nuevoUsuario := models.Usuario{
-		Nombre:    usuario.Nombre,
-		Apellido:  usuario.Apellido,
-		CI:        usuario.CI,
-		Celular:   usuario.Celular,
-		Direccion: usuario.Direccion,
-		Foto:      usuario.Foto,
-		Usuario:   usuario.Usuario,
-		Contra:    usuario.Contra,
-		Estado:    nuevoEstado,
-		IDRol:     nuevoRol,
+		Nombre:         usuario.Nombre,
+		Apellido:       usuario.Apellido,
+		CI:             usuario.CI,
+		Celular:        usuario.Celular,
+		Direccion:      usuario.Direccion,
+		Foto:           usuario.Foto,
+		Usuario:        usuario.Usuario,
+		Contra:         hashedPassword,
+		Estado:         nuevoEstado,
+		IDRol:          nuevoRol,
+		SessionVersion: 1,
 	}
 
 	tx := db.GDB.Begin()
@@ -219,7 +226,7 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 	var usuarioActualizado UsuarioModificado
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
-			http.Error(w, "Error al parsear el formulario: "+err.Error(), http.StatusBadRequest)
+			http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 			return
 		}
 
@@ -236,8 +243,13 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 		file, handler, err := r.FormFile("foto")
 		if err == nil {
 			defer file.Close()
+			extension, validationErr := validateImageUpload(handler, maxUserPhotoSize)
+			if validationErr != nil {
+				http.Error(w, validationErr.Error(), http.StatusBadRequest)
+				return
+			}
 
-			if err := os.MkdirAll("internal/images/usuarios", os.ModePerm); err != nil {
+			if err := os.MkdirAll("internal/images/usuarios", 0750); err != nil {
 				http.Error(w, "Error al preparar la carpeta de fotos", http.StatusInternalServerError)
 				return
 			}
@@ -246,10 +258,10 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 				_ = os.Remove(usuarioExistente.Foto)
 			}
 
-			nombreImagen := fmt.Sprintf("usuario-%s%s", uuid.New().String(), filepath.Ext(handler.Filename))
+			nombreImagen := fmt.Sprintf("usuario-%s%s", uuid.New().String(), extension)
 			rutaImagen := "internal/images/usuarios/" + nombreImagen
 
-			outFile, err := os.Create(rutaImagen)
+			outFile, err := createUploadFile(rutaImagen)
 			if err != nil {
 				http.Error(w, "Error al guardar la nueva foto", http.StatusInternalServerError)
 				return
@@ -263,12 +275,12 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 
 			usuarioExistente.Foto = rutaImagen
 		} else if err != http.ErrMissingFile {
-			http.Error(w, "Error al procesar la foto: "+err.Error(), http.StatusBadRequest)
+			http.Error(w, "Foto no valida", http.StatusBadRequest)
 			return
 		}
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&usuarioActualizado); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 			return
 		}
 	}
@@ -276,10 +288,16 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 	// Validate password if provided
 	if usuarioActualizado.Contra != "" {
 		if !validatePassword(usuarioActualizado.Contra) {
-			http.Error(w, "La contraseña debe tener al menos 8 caracteres, incluyendo letras y números.", http.StatusBadRequest)
+			http.Error(w, "La contraseña debe tener al menos 12 caracteres.", http.StatusBadRequest)
 			return
 		}
-		usuarioExistente.Contra = usuarioActualizado.Contra
+		hash, err := security.HashPassword(usuarioActualizado.Contra)
+		if err != nil {
+			http.Error(w, "No se pudo proteger la contraseña", http.StatusInternalServerError)
+			return
+		}
+		usuarioExistente.Contra = hash
+		usuarioExistente.MustChangePassword = false
 	}
 
 	// Cambios
@@ -303,6 +321,10 @@ func ModificarUsuario(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	usuarioExistente.IDRol = nuevoRol
+	if usuarioExistente.SessionVersion == 0 {
+		usuarioExistente.SessionVersion = 1
+	}
+	usuarioExistente.SessionVersion++
 
 	if err := db.GDB.Save(&usuarioExistente).Error; err != nil {
 		http.Error(w, "Error al actualizar usuario", http.StatusInternalServerError)

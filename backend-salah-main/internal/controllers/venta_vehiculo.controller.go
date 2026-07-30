@@ -3,6 +3,7 @@ package controllers
 import (
 	"backend-restaurant-delitto/internal/db"
 	"backend-restaurant-delitto/internal/models"
+	"backend-restaurant-delitto/internal/security"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -150,14 +151,21 @@ type PagoCuotaCreditoDAO struct {
 func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	venta, documentoGuardado, err := leerVentaVehiculoRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Datos de venta no validos", http.StatusBadRequest)
 		return
 	}
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		eliminarArchivoVenta(documentoGuardado)
+		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
+		return
+	}
+	venta.IDUsuario = principal.ID
 
 	nuevaVenta, err := construirVentaVehiculo(venta)
 	if err != nil {
 		eliminarArchivoVenta(documentoGuardado)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Datos de venta no validos", http.StatusBadRequest)
 		return
 	}
 
@@ -165,7 +173,7 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	if err := validarDisponibilidadVenta(tx, nuevaVenta.IDVehiculo, nuevaVenta.Cantidad, 0); err != nil {
 		tx.Rollback()
 		eliminarArchivoVenta(documentoGuardado)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 		return
 	}
 
@@ -173,7 +181,7 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		if err := descontarCantidadVehiculo(tx, nuevaVenta.IDVehiculo, nuevaVenta.Cantidad); err != nil {
 			tx.Rollback()
 			eliminarArchivoVenta(documentoGuardado)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 			return
 		}
 	}
@@ -316,14 +324,11 @@ func guardarDocumentoGarantiaVenta(r *http.Request) (string, error) {
 	}
 
 	fileHeader := fileHeaders[0]
-	if fileHeader.Size > 10*1024*1024 {
-		return "", errors.New("El documento de garantia no debe superar los 10MB")
+	ext, err := validateGuaranteeUpload(fileHeader)
+	if err != nil {
+		return "", err
 	}
-	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	if !extensionDocumentoGarantiaPermitida(ext) {
-		return "", errors.New("Documento de garantia no valido")
-	}
-	if err := os.MkdirAll("internal/images/garantias", 0755); err != nil {
+	if err := os.MkdirAll("internal/images/garantias", 0750); err != nil {
 		return "", errors.New("Error al preparar la carpeta de garantias")
 	}
 
@@ -334,7 +339,7 @@ func guardarDocumentoGarantiaVenta(r *http.Request) (string, error) {
 	defer file.Close()
 
 	rutaDocumento := fmt.Sprintf("internal/images/garantias/garantia-%s%s", uuid.New().String(), ext)
-	outFile, err := os.Create(rutaDocumento)
+	outFile, err := createUploadFile(rutaDocumento)
 	if err != nil {
 		return "", errors.New("Error al guardar el documento de garantia")
 	}
@@ -346,15 +351,6 @@ func guardarDocumentoGarantiaVenta(r *http.Request) (string, error) {
 		return "", errors.New("Error al escribir el documento de garantia")
 	}
 	return rutaDocumento, nil
-}
-
-func extensionDocumentoGarantiaPermitida(ext string) bool {
-	switch ext {
-	case ".pdf", ".png", ".jpg", ".jpeg", ".webp":
-		return true
-	default:
-		return false
-	}
 }
 
 func eliminarArchivoVenta(path string) {
@@ -410,6 +406,10 @@ func parseBoolFormValue(value string) bool {
 
 func ObtenerCuotasCreditoVenta(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	if !puedeAccederVenta(r, id) {
+		http.Error(w, "Venta no encontrada", http.StatusNotFound)
+		return
+	}
 	cuotas := make([]CuotaCreditoDAO, 0)
 	query := `
 		select cc.id, cc.id_venta_vehiculo, cc.numero, to_char(cc.fecha_vencimiento, 'YYYY-MM-DD') as fecha_vencimiento,
@@ -440,6 +440,12 @@ func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Tipo de cambio requerido", http.StatusBadRequest)
 		return
 	}
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
+		return
+	}
+	payload.IDUsuarioPago = principal.ID
 	tipoCambioPago := roundMoney(payload.TipoCambioPago)
 	if tipoCambioPago <= 0 {
 		http.Error(w, "Tipo de cambio requerido", http.StatusBadRequest)
@@ -452,7 +458,7 @@ func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 
 	tx := db.GDB.Begin()
 	var cuota models.CuotaCredito
-	if err := tx.Where("id = ?", id).First(&cuota).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).First(&cuota).Error; err != nil {
 		tx.Rollback()
 		http.Error(w, "Cuota no encontrada", http.StatusNotFound)
 		return
@@ -491,6 +497,14 @@ func ObtenerVentasVehiculos(w http.ResponseWriter, r *http.Request) {
 
 	query := ventasVehiculosQuery()
 	args := []interface{}{}
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
+		return
+	}
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+		idUsuario = strconv.FormatUint(uint64(principal.ID), 10)
+	}
 	if idUsuario != "" {
 		if _, err := strconv.Atoi(idUsuario); err != nil {
 			http.Error(w, "Usuario no valido", http.StatusBadRequest)
@@ -512,6 +526,10 @@ func ObtenerVentasVehiculos(w http.ResponseWriter, r *http.Request) {
 
 func ObtenerVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	if !puedeAccederVenta(r, id) {
+		http.Error(w, "Venta no encontrada", http.StatusNotFound)
+		return
+	}
 	ventas := make([]VentaVehiculoHistorialDAO, 0)
 	query := ventasVehiculosQuery() + " where vv.id = ? limit 1"
 
@@ -528,7 +546,7 @@ func ActualizarEstadoVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	var payload VentaVehiculoEstadoDAO
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -545,7 +563,7 @@ func ActualizarEstadoVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		estadoVenta, err := normalizarEstadoVenta(payload.EstadoVenta)
 		if err != nil {
 			tx.Rollback()
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Estado de venta no valido", http.StatusBadRequest)
 			return
 		}
 		venta.EstadoVenta = estadoVenta
@@ -557,7 +575,7 @@ func ActualizarEstadoVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		metodoPago, err := normalizarMetodoPago(payload.MetodoPago)
 		if err != nil {
 			tx.Rollback()
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Metodo de pago no valido", http.StatusBadRequest)
 			return
 		}
 		venta.MetodoPago = metodoPago
@@ -581,14 +599,14 @@ func ActualizarEstadoVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	if !ventaDescuentaStock(estadoAnterior) && ventaDescuentaStock(venta.EstadoVenta) {
 		if err := descontarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 			return
 		}
 	}
 	if ventaDescuentaStock(estadoAnterior) && !ventaDescuentaStock(venta.EstadoVenta) {
 		if err := restaurarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternalError(w, "Error al restaurar disponibilidad al actualizar venta", err)
 			return
 		}
 	}
@@ -621,7 +639,7 @@ func AnularVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	if ventaDescuentaStock(venta.EstadoVenta) {
 		if err := restaurarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			respondInternalError(w, "Error al restaurar disponibilidad al anular venta", err)
 			return
 		}
 	}
@@ -641,9 +659,15 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	var payload CompletarReservaDAO
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
+		return
+	}
+	payload.IDUsuarioPago = principal.ID
 
 	tx := db.GDB.Begin()
 	var venta models.VentaVehiculo
@@ -688,13 +712,13 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 	metodoPago, err := normalizarMetodoPago(payload.MetodoPago)
 	if err != nil {
 		tx.Rollback()
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Metodo de pago no valido", http.StatusBadRequest)
 		return
 	}
 
 	if err := descontarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
 		tx.Rollback()
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 		return
 	}
 
@@ -995,7 +1019,7 @@ func actualizarEstadoVentaPorCuotas(tx *gorm.DB, idVenta uint) error {
 
 func validarDisponibilidadVenta(tx *gorm.DB, idVehiculo uint, cantidad uint, excluirVentaID uint) error {
 	var vehiculo models.Vehiculo
-	if err := tx.Where("id = ?", idVehiculo).First(&vehiculo).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", idVehiculo).First(&vehiculo).Error; err != nil {
 		return errors.New("Vehiculo no encontrado")
 	}
 
@@ -1026,7 +1050,7 @@ func cantidadReservadaActiva(tx *gorm.DB, idVehiculo uint, excluirVentaID uint) 
 
 func descontarCantidadVehiculo(tx *gorm.DB, idVehiculo uint, cantidad uint) error {
 	var vehiculo models.Vehiculo
-	if err := tx.Where("id = ?", idVehiculo).First(&vehiculo).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", idVehiculo).First(&vehiculo).Error; err != nil {
 		return errors.New("Vehiculo no encontrado")
 	}
 	if vehiculo.CantidadDisponible < cantidad {
@@ -1039,6 +1063,19 @@ func descontarCantidadVehiculo(tx *gorm.DB, idVehiculo uint, cantidad uint) erro
 func restaurarCantidadVehiculo(tx *gorm.DB, idVehiculo uint, cantidad uint) error {
 	return tx.Model(&models.Vehiculo{}).Where("id = ?", idVehiculo).
 		UpdateColumn("cantidad_disponible", gorm.Expr("cantidad_disponible + ?", cantidad)).Error
+}
+
+func puedeAccederVenta(r *http.Request, id interface{}) bool {
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		return false
+	}
+	query := db.GDB.Model(&models.VentaVehiculo{}).Where("id = ?", id)
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+		query = query.Where("id_usuario = ?", principal.ID)
+	}
+	var count int64
+	return query.Count(&count).Error == nil && count == 1
 }
 
 func normalizarTipoVenta(tipo string) (string, error) {

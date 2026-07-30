@@ -1,7 +1,0 @@
-./categoriasvehiculos.query.go
-./cliente.query.go
-./gastos.query.go
-./movimiento.query.go
-./segmentosvehiculos.query.go
-./usuario.query.go
-./vehiculos.query.go

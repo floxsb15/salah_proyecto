@@ -5,6 +5,7 @@ import (
 	"backend-restaurant-delitto/internal/functions"
 	"backend-restaurant-delitto/internal/models"
 	"backend-restaurant-delitto/internal/querys"
+	"backend-restaurant-delitto/internal/security"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -175,21 +176,26 @@ func guardarImagenesVehiculo(r *http.Request, required bool) (string, []string, 
 		return "", nil, errors.New("Solo se permiten hasta 5 fotos")
 	}
 
-	if err := os.MkdirAll("internal/images/vehiculos", 0755); err != nil {
+	if err := os.MkdirAll("internal/images/vehiculos", 0750); err != nil {
 		return "", nil, errors.New("Error al preparar la carpeta de fotos")
 	}
 
 	paths := make([]string, 0, len(fileHeaders))
 	for _, fileHeader := range fileHeaders {
+		extension, validationErr := validateImageUpload(fileHeader, maxVehiclePhotoSize)
+		if validationErr != nil {
+			eliminarImagenesVehiculo(paths)
+			return "", nil, validationErr
+		}
 		file, err := fileHeader.Open()
 		if err != nil {
 			eliminarImagenesVehiculo(paths)
 			return "", nil, errors.New("Error al obtener la foto")
 		}
 
-		nombreImagen := fmt.Sprintf("vehiculo-%s%s", uuid.New().String(), filepath.Ext(fileHeader.Filename))
+		nombreImagen := fmt.Sprintf("vehiculo-%s%s", uuid.New().String(), extension)
 		rutaImagen := "internal/images/vehiculos/" + nombreImagen
-		outFile, err := os.Create(rutaImagen)
+		outFile, err := createUploadFile(rutaImagen)
 		if err != nil {
 			file.Close()
 			eliminarImagenesVehiculo(paths)
@@ -284,7 +290,7 @@ func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 
 	direccionImagen, imagenesGuardadas, err := guardarImagenesVehiculo(r, true)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Imagen no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -295,7 +301,7 @@ func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 	}
 	precioCompra, err := parsePrecioCompraAdmin(r)
 	if err != nil {
-		http.Error(w, err.Error(), statusCodePrecioCompra(err))
+		http.Error(w, messagePrecioCompra(err), statusCodePrecioCompra(err))
 		return
 	}
 	nuevoEstado, err := functions.ActualizarEstado(r.FormValue("estado"))
@@ -379,7 +385,7 @@ func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 	tx := db.GDB.Begin()
 	if err := tx.Create(&nuevoVehiculo).Error; err != nil {
 		tx.Rollback()
-		http.Error(w, "Error al guardar el vehiculo: "+err.Error(), http.StatusInternalServerError)
+		respondInternalError(w, "Error al guardar el vehiculo", err)
 		eliminarImagenesVehiculo(imagenesGuardadas)
 		return
 	}
@@ -401,13 +407,13 @@ func ModificarVehiculo(w http.ResponseWriter, r *http.Request) {
 
 	err = r.ParseMultipartForm(20 << 20)
 	if err != nil {
-		http.Error(w, "Error al parsear el formulario: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
 	nuevaImagen, imagenesGuardadas, err := guardarImagenesVehiculo(r, false)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Imagen no valida", http.StatusBadRequest)
 		return
 	}
 	if len(imagenesGuardadas) > 0 {
@@ -425,7 +431,7 @@ func ModificarVehiculo(w http.ResponseWriter, r *http.Request) {
 	if r.FormValue("precio_compra") != "" {
 		precioCompra, err := parsePrecioCompraAdmin(r)
 		if err != nil {
-			http.Error(w, err.Error(), statusCodePrecioCompra(err))
+			http.Error(w, messagePrecioCompra(err), statusCodePrecioCompra(err))
 			return
 		}
 		vehiculoExistente.PrecioCompra = precioCompra
@@ -570,29 +576,16 @@ func statusCodePrecioCompra(err error) int {
 	return http.StatusBadRequest
 }
 
-func requestActorEsAdmin(r *http.Request, actorID string) bool {
-	userID, err := obtenerUsuarioDesdeAuthHeader(r.Header.Get("Authorization"))
-	if err != nil || userID == 0 {
-		actorID = strings.TrimSpace(actorID)
-		if actorID == "" {
-			actorID = strings.TrimSpace(r.Header.Get("X-User-Id"))
-		}
-		if actorID == "" {
-			actorID = strings.TrimSpace(r.FormValue("id_usuario_actor"))
-		}
-		parsedID, parseErr := strconv.ParseUint(actorID, 10, 64)
-		if parseErr != nil || parsedID == 0 {
-			return false
-		}
-		userID = uint(parsedID)
+func messagePrecioCompra(err error) string {
+	if errors.Is(err, errPrecioCompraNoAutorizado) {
+		return "Acceso denegado"
 	}
-	var rol string
-	err = db.GDB.Table("usuarios as u").
-		Select("r.nombre").
-		Joins("inner join roles r on r.id = u.id_rol").
-		Where("u.id = ? and u.estado = true", userID).
-		Scan(&rol).Error
-	return err == nil && strings.EqualFold(strings.TrimSpace(rol), "admin")
+	return "Precio de compra no valido"
+}
+
+func requestActorEsAdmin(r *http.Request, actorID string) bool {
+	_ = actorID
+	return security.CurrentUserHasRole(r, "admin")
 }
 
 func validarSegmentoCategoria(idSegmento *uint, idCategoria uint) error {

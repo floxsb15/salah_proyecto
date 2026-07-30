@@ -205,13 +205,14 @@
                 </div>
                 <i class="pi pi-chevron-down hidden text-xs text-yellow-400 sm:block"></i>
             </div>
-            <NuxtLink
-              to="/login"
+            <button
+              type="button"
+              @click="cerrarSesion"
               class="inline-flex h-10 items-center gap-2 rounded-md px-3 text-sm transition-colors hover:bg-red-900/60"
             >
               <i class="pi pi-sign-out text-yellow-400"></i>
               <span>Cerrar Sesión</span>
-            </NuxtLink>
+            </button>
           </div>
         </client-only>
       </header>
@@ -264,18 +265,21 @@ const userInitials = computed(() => {
 onMounted(async () => {
   const user = localStorage.getItem('user');
   if (user) {
-    const parsedUser = JSON.parse(user);
-    const userId = parsedUser.id;
-    if (userId) {
-      try {
-        const res:any = await $fetch(server.HOST + '/api/v1/usuarios/' + userId, {
-          method: 'GET'
-        });
-        Object.assign(userData.value, res);
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-      }
+    try {
+      const res:any = await $fetch(server.HOST + '/api/v1/me', { method: 'GET' });
+      Object.assign(userData.value, res);
+    } catch (err) {
+      console.error('Error fetching user data:', err);
     }
   }
 });
+
+async function cerrarSesion() {
+  try {
+    await $fetch('/api/v1/logout', { method: 'POST' });
+  } finally {
+    localStorage.removeItem('user');
+    await navigateTo('/login');
+  }
+}
 </script>

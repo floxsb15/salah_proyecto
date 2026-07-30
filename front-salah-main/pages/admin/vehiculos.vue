@@ -140,8 +140,7 @@ onMounted(async () => {
 async function obtenerVehiculos() {
   try {
     const res:any[] = await $fetch(server.HOST + '/api/v1/vehiculos', {
-      method: 'GET',
-      headers: getAuthHeaders()
+      method: 'GET'
     });
     res.sort((a, b) => a.categoria.localeCompare(b.categoria));
     Vehiculos.value = res;
@@ -172,23 +171,6 @@ function formatPrecio(precio: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
-}
-
-function getAuthHeaders() {
-  try {
-    const user = localStorage.getItem('user');
-    const parsed = user ? JSON.parse(user) : null;
-    const headers: Record<string, string> = {};
-    if (parsed?.token) {
-      headers.Authorization = `Bearer ${parsed.token}`;
-    }
-    if (parsed?.id) {
-      headers['X-User-Id'] = String(parsed.id);
-    }
-    return headers;
-  } catch {
-    return {};
-  }
 }
 
 function mostrarError(summary: string, err: any) {

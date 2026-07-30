@@ -1,4 +1,4 @@
 export enum server {
-    HOST = 'http://localhost:5000'
-    // HOST = 'http://192.168.0.34:5000'
+    // The reverse proxy (and Nuxt's dev proxy) serves the API on the same origin.
+    HOST = ''
 }

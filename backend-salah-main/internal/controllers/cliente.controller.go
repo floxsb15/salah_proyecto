@@ -159,7 +159,7 @@ func AgregarCliente(w http.ResponseWriter, r *http.Request) {
 	var cliente ClienteDAO
 
 	if err := json.NewDecoder(r.Body).Decode(&cliente); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -218,7 +218,7 @@ func ModificarCliente(w http.ResponseWriter, r *http.Request) {
 
 	var clienteActualizado ClienteDAO
 	if err := json.NewDecoder(r.Body).Decode(&clienteActualizado); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 

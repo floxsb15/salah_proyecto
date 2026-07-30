@@ -1,8 +1,0 @@
-./categoria_vehiculo.go
-./cliente.go
-./compra_vehiculo.go
-./gastos_varios.go
-./movimientos_gastos.go
-./rol.go
-./usuario.go
-./vehiculo.go

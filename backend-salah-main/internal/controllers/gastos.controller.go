@@ -53,7 +53,7 @@ func AgregarGasto(w http.ResponseWriter, r *http.Request) {
 	var gasto models.GastoVario
 
 	if err := json.NewDecoder(r.Body).Decode(&gasto); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -81,7 +81,7 @@ func ModificarGasto(w http.ResponseWriter, r *http.Request) {
 
 	var gastoActualizado GetGasto
 	if err := json.NewDecoder(r.Body).Decode(&gastoActualizado); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
