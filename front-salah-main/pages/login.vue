@@ -118,7 +118,7 @@ async function iniciarSesion() {
       headers: { 'Content-Type': 'application/json' }
     });
 
-    if(response.rol === 'admin'){
+    if(['admin', 'contador'].includes(response.rol)){
       localStorage.setItem('user', JSON.stringify(response));
       router.push('/admin/dashboard');
     } else if(['encargado de ventas', 'vendedor'].includes(response.rol)){

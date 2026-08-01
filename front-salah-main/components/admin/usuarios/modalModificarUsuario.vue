@@ -297,7 +297,7 @@ const initialValues = reactive({
   foto: null as File | null
 })
 
-const Roles = ref(['admin', 'encargado de ventas', 'vendedor'])
+const Roles = ref(['admin', 'encargado de ventas', 'vendedor', 'contador'])
 const Estados = ref(['Activo', 'Inactivo'])
 
 onMounted(async () => {

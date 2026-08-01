@@ -34,33 +34,40 @@ const (
 )
 
 type VentaVehiculoDAO struct {
-	IDCliente           uint    `json:"id_cliente"`
-	IDVehiculo          uint    `json:"id_vehiculo"`
-	IDUsuario           uint    `json:"id_usuario"`
-	Fecha               string  `json:"fecha"`
-	TipoVenta           string  `json:"tipo_venta"`
-	Cantidad            uint    `json:"cantidad"`
-	TipoCambio          float64 `json:"tipo_cambio"`
-	PagoUSD             float64 `json:"pago_usd"`
-	PagoBOB             float64 `json:"pago_bob"`
-	ValidezProformaDias uint    `json:"validez_proforma_dias"`
-	EstadoVenta         string  `json:"estado_venta"`
-	EstadoPago          string  `json:"estado_pago"`
-	MetodoPago          string  `json:"metodo_pago"`
-	EstadoEntrega       string  `json:"estado_entrega"`
-	FechaEntrega        string  `json:"fecha_entrega"`
-	ReferenciaBancaria  string  `json:"referencia_bancaria"`
-	EstadoDesembolso    string  `json:"estado_desembolso"`
-	MontoReserva        float64 `json:"monto_reserva"`
-	MontoInicial        float64 `json:"monto_inicial"`
-	NumeroCuotas        uint    `json:"numero_cuotas"`
-	FechaInicioCredito  string  `json:"fecha_inicio_credito"`
-	FrecuenciaPago      string  `json:"frecuencia_pago"`
-	TieneRespaldo       bool    `json:"tiene_respaldo"`
-	TipoGarantia        string  `json:"tipo_garantia"`
-	DocumentoGarantia   string  `json:"documento_garantia"`
-	DatosGarante        string  `json:"datos_garante"`
-	Observacion         string  `json:"observacion"`
+	IDCliente           uint           `json:"id_cliente"`
+	IDVehiculo          uint           `json:"id_vehiculo"`
+	IDUsuario           uint           `json:"id_usuario"`
+	Fecha               string         `json:"fecha"`
+	TipoVenta           string         `json:"tipo_venta"`
+	Cantidad            uint           `json:"cantidad"`
+	TipoCambio          float64        `json:"tipo_cambio"`
+	PagoUSD             float64        `json:"pago_usd"`
+	PagoBOB             float64        `json:"pago_bob"`
+	Pagos               []PagoVentaDAO `json:"pagos"`
+	ValidezProformaDias uint           `json:"validez_proforma_dias"`
+	EstadoVenta         string         `json:"estado_venta"`
+	EstadoPago          string         `json:"estado_pago"`
+	MetodoPago          string         `json:"metodo_pago"`
+	EstadoEntrega       string         `json:"estado_entrega"`
+	FechaEntrega        string         `json:"fecha_entrega"`
+	ReferenciaBancaria  string         `json:"referencia_bancaria"`
+	EstadoDesembolso    string         `json:"estado_desembolso"`
+	MontoReserva        float64        `json:"monto_reserva"`
+	MontoInicial        float64        `json:"monto_inicial"`
+	NumeroCuotas        uint           `json:"numero_cuotas"`
+	FechaInicioCredito  string         `json:"fecha_inicio_credito"`
+	FrecuenciaPago      string         `json:"frecuencia_pago"`
+	TieneRespaldo       bool           `json:"tiene_respaldo"`
+	TipoGarantia        string         `json:"tipo_garantia"`
+	DocumentoGarantia   string         `json:"documento_garantia"`
+	DatosGarante        string         `json:"datos_garante"`
+	Observacion         string         `json:"observacion"`
+}
+
+type PagoVentaDAO struct {
+	Moneda string  `json:"moneda"`
+	Metodo string  `json:"metodo"`
+	Monto  float64 `json:"monto"`
 }
 
 type VentaVehiculoEstadoDAO struct {
@@ -82,51 +89,53 @@ type CompletarReservaDAO struct {
 }
 
 type VentaVehiculoHistorialDAO struct {
-	ID                       uint    `json:"id"`
-	IDCliente                uint    `json:"id_cliente"`
-	IDVehiculo               uint    `json:"id_vehiculo"`
-	IDUsuario                *uint   `json:"id_usuario"`
-	Fecha                    string  `json:"fecha"`
-	FechaVenta               string  `json:"fecha_venta"`
-	TipoVenta                string  `json:"tipo_venta"`
-	Cantidad                 uint    `json:"cantidad"`
-	PrecioUnidad             float64 `json:"precio_unidad"`
-	PrecioTotal              float64 `json:"precio_total"`
-	PrecioUSD                float64 `json:"precio_usd"`
-	TipoCambioUsado          float64 `json:"tipo_cambio_usado"`
-	MontoBOBCalculado        float64 `json:"monto_bob_calculado"`
-	PagoUSD                  float64 `json:"pago_usd"`
-	PagoBOB                  float64 `json:"pago_bob"`
-	SaldoBOB                 float64 `json:"saldo_bob"`
-	CuotaInicial             float64 `json:"cuota_inicial"`
-	Saldo                    float64 `json:"saldo"`
-	ValidezProformaDias      uint    `json:"validez_proforma_dias"`
-	FechaVencimientoProforma string  `json:"fecha_vencimiento_proforma"`
-	EstadoVenta              string  `json:"estado_venta"`
-	EstadoPago               string  `json:"estado_pago"`
-	MetodoPago               string  `json:"metodo_pago"`
-	EstadoEntrega            string  `json:"estado_entrega"`
-	FechaEntrega             string  `json:"fecha_entrega"`
-	ReferenciaBancaria       string  `json:"referencia_bancaria"`
-	EstadoDesembolso         string  `json:"estado_desembolso"`
-	MontoFinanciado          float64 `json:"monto_financiado"`
-	NumeroCuotas             uint    `json:"numero_cuotas"`
-	MontoCuota               float64 `json:"monto_cuota"`
-	FechaInicioCredito       string  `json:"fecha_inicio_credito"`
-	FrecuenciaPago           string  `json:"frecuencia_pago"`
-	TieneRespaldo            bool    `json:"tiene_respaldo"`
-	TipoGarantia             string  `json:"tipo_garantia"`
-	DocumentoGarantia        string  `json:"documento_garantia"`
-	DatosGarante             string  `json:"datos_garante"`
-	Observacion              string  `json:"observacion"`
-	ProformaVencida          bool    `json:"proforma_vencida"`
-	Cliente                  string  `json:"cliente"`
-	CICliente                string  `json:"ci_cliente"`
-	Vehiculo                 string  `json:"vehiculo"`
-	Categoria                string  `json:"categoria"`
-	Segmento                 string  `json:"segmento"`
-	Vendedor                 string  `json:"vendedor"`
-	UsuarioPagoReserva       string  `json:"usuario_pago_reserva"`
+	ID                       uint            `json:"id"`
+	IDCliente                uint            `json:"id_cliente"`
+	IDVehiculo               uint            `json:"id_vehiculo"`
+	IDUsuario                *uint           `json:"id_usuario"`
+	Fecha                    string          `json:"fecha"`
+	FechaVenta               string          `json:"fecha_venta"`
+	TipoVenta                string          `json:"tipo_venta"`
+	Cantidad                 uint            `json:"cantidad"`
+	PrecioUnidad             float64         `json:"precio_unidad"`
+	PrecioTotal              float64         `json:"precio_total"`
+	PrecioUSD                float64         `json:"precio_usd"`
+	TipoCambioUsado          float64         `json:"tipo_cambio_usado"`
+	MontoBOBCalculado        float64         `json:"monto_bob_calculado"`
+	PagoUSD                  float64         `json:"pago_usd"`
+	PagoBOB                  float64         `json:"pago_bob"`
+	Pagos                    json.RawMessage `json:"pagos"`
+	DetallePago              string          `json:"detalle_pago"`
+	SaldoBOB                 float64         `json:"saldo_bob"`
+	CuotaInicial             float64         `json:"cuota_inicial"`
+	Saldo                    float64         `json:"saldo"`
+	ValidezProformaDias      uint            `json:"validez_proforma_dias"`
+	FechaVencimientoProforma string          `json:"fecha_vencimiento_proforma"`
+	EstadoVenta              string          `json:"estado_venta"`
+	EstadoPago               string          `json:"estado_pago"`
+	MetodoPago               string          `json:"metodo_pago"`
+	EstadoEntrega            string          `json:"estado_entrega"`
+	FechaEntrega             string          `json:"fecha_entrega"`
+	ReferenciaBancaria       string          `json:"referencia_bancaria"`
+	EstadoDesembolso         string          `json:"estado_desembolso"`
+	MontoFinanciado          float64         `json:"monto_financiado"`
+	NumeroCuotas             uint            `json:"numero_cuotas"`
+	MontoCuota               float64         `json:"monto_cuota"`
+	FechaInicioCredito       string          `json:"fecha_inicio_credito"`
+	FrecuenciaPago           string          `json:"frecuencia_pago"`
+	TieneRespaldo            bool            `json:"tiene_respaldo"`
+	TipoGarantia             string          `json:"tipo_garantia"`
+	DocumentoGarantia        string          `json:"documento_garantia"`
+	DatosGarante             string          `json:"datos_garante"`
+	Observacion              string          `json:"observacion"`
+	ProformaVencida          bool            `json:"proforma_vencida"`
+	Cliente                  string          `json:"cliente"`
+	CICliente                string          `json:"ci_cliente"`
+	Vehiculo                 string          `json:"vehiculo"`
+	Categoria                string          `json:"categoria"`
+	Segmento                 string          `json:"segmento"`
+	Vendedor                 string          `json:"vendedor"`
+	UsuarioPagoReserva       string          `json:"usuario_pago_reserva"`
 }
 
 type CuotaCreditoDAO struct {
@@ -160,6 +169,15 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if len(venta.Pagos) > 0 {
+		pagosNormalizados, _, _, _, err := normalizarPagosVenta(venta.Pagos, venta.TipoCambio)
+		if err != nil {
+			eliminarArchivoVenta(documentoGuardado)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		venta.Pagos = pagosNormalizados
+	}
 
 	tx := db.GDB.Begin()
 	if err := validarDisponibilidadVenta(tx, nuevaVenta.IDVehiculo, nuevaVenta.Cantidad, 0); err != nil {
@@ -183,6 +201,23 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		eliminarArchivoVenta(documentoGuardado)
 		http.Error(w, "Error al registrar venta", http.StatusInternalServerError)
 		return
+	}
+	if len(venta.Pagos) > 0 {
+		pagos := make([]models.PagoVenta, 0, len(venta.Pagos))
+		for _, pago := range venta.Pagos {
+			pagos = append(pagos, models.PagoVenta{
+				VentaID: nuevaVenta.ID,
+				Moneda:  pago.Moneda,
+				Metodo:  pago.Metodo,
+				Monto:   roundMoney(pago.Monto),
+			})
+		}
+		if err := tx.Create(&pagos).Error; err != nil {
+			tx.Rollback()
+			eliminarArchivoVenta(documentoGuardado)
+			http.Error(w, "Error al registrar pagos de la venta", http.StatusInternalServerError)
+			return
+		}
 	}
 	if esVentaCredito(nuevaVenta.TipoVenta) {
 		cuotas := generarCuotasCredito(nuevaVenta)
@@ -256,6 +291,10 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Pago BOB no valido")
 	}
+	pagos, err := parsePagosVentaFormValue(r.FormValue("pagos"))
+	if err != nil {
+		return VentaVehiculoDAO{}, err
+	}
 	validez, err := parseUintFormValueWithZero(r.FormValue("validez_proforma_dias"))
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Validez de proforma no valida")
@@ -283,6 +322,7 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 		TipoCambio:          tipoCambio,
 		PagoUSD:             pagoUSD,
 		PagoBOB:             pagoBOB,
+		Pagos:               pagos,
 		ValidezProformaDias: validez,
 		EstadoVenta:         r.FormValue("estado_venta"),
 		EstadoPago:          r.FormValue("estado_pago"),
@@ -406,6 +446,19 @@ func parseBoolFormValue(value string) bool {
 	default:
 		return false
 	}
+}
+
+func parsePagosVentaFormValue(value string) ([]PagoVentaDAO, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+
+	var pagos []PagoVentaDAO
+	if err := json.Unmarshal([]byte(value), &pagos); err != nil {
+		return nil, errors.New("Detalle de pago no valido")
+	}
+	return pagos, nil
 }
 
 func ObtenerCuotasCreditoVenta(w http.ResponseWriter, r *http.Request) {
@@ -819,9 +872,30 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 			return models.VentaVehiculo{}, errors.New("Monto de reserva mayor al precio total")
 		}
 		cuotaInicial = montoReserva
-		saldo = roundMoney(precioTotal - montoReserva)
+		if len(payload.Pagos) > 0 {
+			pagosNormalizados, totalUSD, totalBOB, pagadoEquivalenteUSD, err := normalizarPagosVenta(payload.Pagos, tipoCambio)
+			if err != nil {
+				return models.VentaVehiculo{}, err
+			}
+			if pagadoEquivalenteUSD > montoReserva {
+				return models.VentaVehiculo{}, errors.New("Pago mayor al monto de reserva")
+			}
+			payload.Pagos = pagosNormalizados
+			pagoUSD = totalUSD
+			pagoBOB = totalBOB
+			cuotaInicial = pagadoEquivalenteUSD
+			payload.MetodoPago = resumenMetodoPago(pagosNormalizados)
+			if pagadoEquivalenteUSD >= montoReserva {
+				payload.EstadoPago = "Pagado completo"
+			} else {
+				payload.EstadoPago = "Parcial"
+			}
+		}
+		saldo = roundMoney(precioTotal - cuotaInicial)
 		estadoVenta = estadoVentaRegistrada
-		payload.EstadoPago = "Pagado completo"
+		if strings.TrimSpace(payload.EstadoPago) == "" {
+			payload.EstadoPago = "Pagado completo"
+		}
 		payload.EstadoEntrega = "Pendiente"
 		payload.FechaEntrega = ""
 	}
@@ -849,19 +923,26 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 	}
 	saldoBOB := roundMoney(saldo * tipoCambio)
 	if metodoPago == "Mixto" && tipoVenta != tipoVentaReserva && !esVentaCredito(tipoVenta) {
-		if pagoUSD < 0 || pagoBOB < 0 {
-			return models.VentaVehiculo{}, errors.New("Montos de pago mixto no validos")
+		pagosNormalizados, totalUSD, totalBOB, pagadoEquivalenteUSD, err := normalizarPagosVenta(payload.Pagos, tipoCambio)
+		if err != nil {
+			return models.VentaVehiculo{}, err
 		}
-		pagadoEquivalenteUSD := roundMoney(pagoUSD + (pagoBOB / tipoCambio))
 		if pagadoEquivalenteUSD > precioTotal {
 			return models.VentaVehiculo{}, errors.New("Pago mixto mayor al precio total")
 		}
+		payload.Pagos = pagosNormalizados
+		pagoUSD = totalUSD
+		pagoBOB = totalBOB
+		metodoPago = resumenMetodoPago(pagosNormalizados)
 		cuotaInicial = pagadoEquivalenteUSD
 		saldo = roundMoney(precioTotal - pagadoEquivalenteUSD)
 		saldoBOB = roundMoney(saldo * tipoCambio)
 		if saldo == 0 {
 			estadoVenta = estadoVentaCompletada
 			estadoPago = "Pagado completo"
+		} else if pagadoEquivalenteUSD > 0 {
+			estadoVenta = estadoVentaRegistrada
+			estadoPago = "Parcial"
 		} else {
 			estadoVenta = estadoVentaRegistrada
 			estadoPago = "Pendiente"
@@ -1103,6 +1184,80 @@ func normalizarMetodoPago(metodo string) (string, error) {
 	}
 }
 
+func normalizarMetodoPagoSimple(metodo string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(metodo)) {
+	case "", "efectivo":
+		return "Efectivo", nil
+	case "qr":
+		return "QR", nil
+	case "transferencia":
+		return "Transferencia", nil
+	default:
+		return "", errors.New("Metodo de pago no valido")
+	}
+}
+
+func normalizarMonedaPago(moneda string) (string, error) {
+	switch strings.ToUpper(strings.TrimSpace(moneda)) {
+	case "USD":
+		return "USD", nil
+	case "BOB":
+		return "BOB", nil
+	default:
+		return "", errors.New("Moneda de pago no valida")
+	}
+}
+
+func normalizarPagosVenta(pagos []PagoVentaDAO, tipoCambio float64) ([]PagoVentaDAO, float64, float64, float64, error) {
+	if len(pagos) == 0 {
+		return nil, 0, 0, 0, errors.New("Agregue al menos una linea en el detalle de pago")
+	}
+
+	normalizados := make([]PagoVentaDAO, 0, len(pagos))
+	totalUSD := 0.0
+	totalBOB := 0.0
+	for _, pago := range pagos {
+		moneda, err := normalizarMonedaPago(pago.Moneda)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
+		metodo, err := normalizarMetodoPagoSimple(pago.Metodo)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
+		monto := roundMoney(pago.Monto)
+		if monto <= 0 {
+			return nil, 0, 0, 0, errors.New("Cada linea de pago debe tener monto mayor a cero")
+		}
+		if moneda == "USD" {
+			totalUSD = roundMoney(totalUSD + monto)
+		} else {
+			totalBOB = roundMoney(totalBOB + monto)
+		}
+		normalizados = append(normalizados, PagoVentaDAO{
+			Moneda: moneda,
+			Metodo: metodo,
+			Monto:  monto,
+		})
+	}
+
+	pagadoEquivalenteUSD := roundMoney(totalUSD + (totalBOB / tipoCambio))
+	return normalizados, totalUSD, totalBOB, pagadoEquivalenteUSD, nil
+}
+
+func resumenMetodoPago(pagos []PagoVentaDAO) string {
+	if len(pagos) == 0 {
+		return "Efectivo"
+	}
+	resumen := pagos[0].Metodo
+	for _, pago := range pagos {
+		if pago.Metodo != resumen || pago.Moneda != pagos[0].Moneda {
+			return "Mixto"
+		}
+	}
+	return resumen
+}
+
 func roundMoney(value float64) float64 {
 	return math.Round(value*100) / 100
 }
@@ -1123,8 +1278,10 @@ func ventasVehiculosQuery() string {
 			coalesce(vv.precio_usd, vv.precio_total) as precio_usd,
 			coalesce(vv.tipo_cambio_usado, 0) as tipo_cambio_usado,
 			coalesce(vv.monto_bob_calculado, 0) as monto_bob_calculado,
-			coalesce(vv.pago_usd, 0) as pago_usd,
-			coalesce(vv.pago_bob, 0) as pago_bob,
+			coalesce(pv.total_usd, vv.pago_usd, 0) as pago_usd,
+			coalesce(pv.total_bob, vv.pago_bob, 0) as pago_bob,
+			coalesce(pv.pagos, '[]'::json) as pagos,
+			coalesce(pv.detalle_pago, '') as detalle_pago,
 			coalesce(vv.saldo_bob, 0) as saldo_bob,
 			vv.cuota_inicial,
 			vv.saldo,
@@ -1132,7 +1289,11 @@ func ventasVehiculosQuery() string {
 			to_char(vv.fecha_vencimiento_proforma, 'YYYY-MM-DD') as fecha_vencimiento_proforma,
 			vv.estado_venta,
 			vv.estado_pago,
-			coalesce(vv.metodo_pago, 'Efectivo') as metodo_pago,
+			case
+				when coalesce(pv.cantidad, 0) > 1 then 'Mixto'
+				when coalesce(pv.cantidad, 0) = 1 then pv.unico_metodo
+				else coalesce(vv.metodo_pago, 'Efectivo')
+			end as metodo_pago,
 			vv.estado_entrega,
 			coalesce(to_char(vv.fecha_entrega, 'YYYY-MM-DD'), '') as fecha_entrega,
 			coalesce(vv.referencia_bancaria, '') as referencia_bancaria,
@@ -1161,5 +1322,16 @@ func ventasVehiculosQuery() string {
 		left join categoria_vehiculo cat on cat.id = v.id_categoria
 		left join segmento_vehiculo seg on seg.id = v.id_segmento
 		left join usuarios u on u.id = vv.id_usuario
-		left join usuarios upr on upr.id = vv.id_usuario_pago_reserva`
+		left join usuarios upr on upr.id = vv.id_usuario_pago_reserva
+		left join lateral (
+			select
+				json_agg(json_build_object('id', p.id, 'moneda', p.moneda, 'metodo', p.metodo, 'monto', p.monto) order by p.id) as pagos,
+				string_agg(concat(p.moneda, ' ', p.metodo, ' ', p.monto::text), ' | ' order by p.id) as detalle_pago,
+				count(*) as cantidad,
+				max(p.metodo) as unico_metodo,
+				coalesce(sum(case when p.moneda = 'USD' then p.monto else 0 end), 0) as total_usd,
+				coalesce(sum(case when p.moneda = 'BOB' then p.monto else 0 end), 0) as total_bob
+			from pagos_venta p
+			where p.venta_id = vv.id
+		) pv on true`
 }

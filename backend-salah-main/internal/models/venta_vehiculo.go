@@ -55,6 +55,20 @@ func (VentaVehiculo) TableName() string {
 	return "ventas_vehiculos"
 }
 
+type PagoVenta struct {
+	ID        uint          `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	VentaID   uint          `gorm:"column:venta_id;not null;index" json:"venta_id"`
+	Moneda    string        `gorm:"column:moneda;size:3;not null" json:"moneda"`
+	Metodo    string        `gorm:"column:metodo;size:40;not null" json:"metodo"`
+	Monto     float64       `gorm:"column:monto;not null" json:"monto"`
+	Venta     VentaVehiculo `gorm:"foreignKey:VentaID;reference:ID" json:"-"`
+	CreatedAt time.Time     `gorm:"default:now()" json:"created_at"`
+}
+
+func (PagoVenta) TableName() string {
+	return "pagos_venta"
+}
+
 type CuotaCredito struct {
 	ID               uint       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	IDVentaVehiculo  uint       `gorm:"column:id_venta_vehiculo;not null;index" json:"id_venta_vehiculo"`

@@ -86,6 +86,11 @@
       </Column>
       <Column field="estado_pago" header="Pago" sortable />
       <Column field="metodo_pago" header="Metodo" sortable />
+      <Column field="detalle_pago" header="Detalle pago">
+        <template #body="slotProps">
+          {{ formatDetallePago(slotProps.data) }}
+        </template>
+      </Column>
       <Column field="tipo_cambio_usado" header="TC" sortable>
         <template #body="slotProps">
           {{ formatPrecio(slotProps.data.tipo_cambio_usado) }}
@@ -172,6 +177,7 @@ const filteredVentas = computed(() => {
     (venta.estado_venta?.toLowerCase() || '').includes(query) ||
     (venta.estado_pago?.toLowerCase() || '').includes(query) ||
     (venta.metodo_pago?.toLowerCase() || '').includes(query) ||
+    (venta.detalle_pago?.toLowerCase() || '').includes(query) ||
     (venta.estado_entrega?.toLowerCase() || '').includes(query)
   );
 });
@@ -251,6 +257,7 @@ async function descargarVenta(idVenta: number) {
 function filtrarVentasCompletadas(items: any[]) {
   return items.filter((venta: any) =>
     (venta.estado_venta === 'Completada' && venta.estado_pago === 'Pagado completo') ||
+    (venta.estado_venta === 'Registrada' && venta.estado_pago === 'Parcial') ||
     venta.estado_venta === 'en_credito' ||
     venta.estado_venta === 'pagado_completo'
   );
@@ -258,5 +265,12 @@ function filtrarVentasCompletadas(items: any[]) {
 
 function esCreditoOReserva(tipoVenta: string) {
   return ['Credito', 'credito_directo', 'credito_bancario', 'Reserva'].includes(tipoVenta);
+}
+
+function formatDetallePago(venta: any) {
+  if (venta.detalle_pago) {
+    return venta.detalle_pago;
+  }
+  return venta.metodo_pago || 'N/A';
 }
 </script>

@@ -17,35 +17,35 @@
             <span>Dashboard</span>
           </a>
         </router-link>
-        <router-link to="/admin/usuarios" custom v-slot="{ href, navigate, isActive }">
+        <router-link v-if="!isContador" to="/admin/usuarios" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
             <i class="pi pi-users text-yellow-400" :class="{ '!text-black': isActive }"></i>
             <span>Usuarios</span>
           </a>
         </router-link>
-        <router-link to="/admin/clientes" custom v-slot="{ href, navigate, isActive }">
+        <router-link v-if="!isContador" to="/admin/clientes" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
             <i class="pi pi-id-card text-yellow-400" :class="{ '!text-black': isActive }"></i>
             <span>Clientes</span>
           </a>
         </router-link>
-        <router-link to="/admin/categorias-vehiculos" custom v-slot="{ href, navigate, isActive }">
+        <router-link v-if="!isContador" to="/admin/categorias-vehiculos" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
             <i class="pi pi-tags text-yellow-400" :class="{ '!text-black': isActive }"></i>
             <span>Categorias Vehiculo</span>
           </a>
         </router-link>
-        <router-link to="/admin/vehiculos" custom v-slot="{ href, navigate, isActive }">
+        <router-link v-if="!isContador" to="/admin/vehiculos" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
             <i class="pi pi-car text-yellow-400" :class="{ '!text-black': isActive }"></i>
             <span>Vehiculos</span>
           </a>
         </router-link>
-        <router-link to="/admin/catalogo-vehiculos" custom v-slot="{ href, navigate, isActive }">
+        <router-link v-if="!isContador" to="/admin/catalogo-vehiculos" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
             <i class="pi pi-images text-yellow-400" :class="{ '!text-black': isActive }"></i>
@@ -71,7 +71,7 @@
                 <span>Historial General</span>
               </a>
             </router-link>
-            <router-link to="/admin/creditos-personal" custom v-slot="{ href, navigate, isActive }">
+            <router-link v-if="!isContador" to="/admin/creditos-personal" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
                 <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
@@ -99,7 +99,7 @@
                 <span>Historial General</span>
               </a>
             </router-link>
-            <router-link to="/admin/historial-ventas-personal" custom v-slot="{ href, navigate, isActive }">
+            <router-link v-if="!isContador" to="/admin/historial-ventas-personal" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
                 <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
@@ -127,7 +127,7 @@
                 <span>Historial General</span>
               </a>
             </router-link>
-            <router-link to="/admin/historial-reservas-personal" custom v-slot="{ href, navigate, isActive }">
+            <router-link v-if="!isContador" to="/admin/historial-reservas-personal" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
                 <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
@@ -166,15 +166,15 @@
                 <i class="pi pi-chart-bar text-yellow-400"></i>
                 <span>Dashboard</span>
               </NuxtLink>
-              <NuxtLink to="/admin/clientes" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
+              <NuxtLink v-if="!isContador" to="/admin/clientes" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
                 <i class="pi pi-id-card text-yellow-400"></i>
                 <span>Clientes</span>
               </NuxtLink>
-              <NuxtLink to="/admin/vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
+              <NuxtLink v-if="!isContador" to="/admin/vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
                 <i class="pi pi-car text-yellow-400"></i>
                 <span>Vehiculos</span>
               </NuxtLink>
-              <NuxtLink to="/admin/catalogo-vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
+              <NuxtLink v-if="!isContador" to="/admin/catalogo-vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
                 <i class="pi pi-shopping-cart text-yellow-400"></i>
                 <span>Ventas</span>
               </NuxtLink>
@@ -255,6 +255,7 @@ const route = useRoute();
 const ventasOpen = ref(false);
 const reservasOpen = ref(false);
 const creditosOpen = ref(false);
+const isContador = computed(() => userData.value.rol === 'contador');
 const userInitials = computed(() => {
   const nombre = userData.value.nombre?.trim()?.[0] || 'U';
   const apellido = userData.value.apellido?.trim()?.[0] || '';

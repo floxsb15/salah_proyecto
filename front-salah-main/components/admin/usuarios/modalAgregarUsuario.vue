@@ -283,7 +283,7 @@ const initialValues = reactive({
   rol: '',
   estado: 'Activo'
 })
-const Roles = ref(['admin', 'encargado de ventas', 'vendedor'])
+const Roles = ref(['admin', 'encargado de ventas', 'vendedor', 'contador'])
 
 onMounted(async () => {
   const res:any[] = await $fetch(server.HOST + '/api/v1/usuarios', {

@@ -35,6 +35,7 @@ func Roles() error {
 		{Nombre: "admin", Permisos: "todos los permisos"},
 		{Nombre: "encargado de ventas", Permisos: "ventas"},
 		{Nombre: "vendedor", Permisos: "ventas"},
+		{Nombre: "contador", Permisos: "dashboard, creditos, ventas, reservas"},
 		{Nombre: "cliente", Permisos: "productos"},
 	}
 

@@ -41,6 +41,7 @@ func main() {
 		&models.Cliente{},
 		&models.Vehiculo{},
 		&models.VentaVehiculo{},
+		&models.PagoVenta{},
 		&models.CuotaCredito{},
 		&models.GastoVario{},
 		&models.Movimiento{},

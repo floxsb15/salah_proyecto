@@ -30,6 +30,7 @@ type VentaVehiculoReporte struct {
 	MontoBOBCalculado        float64 `gorm:"column:monto_bob_calculado"`
 	PagoUSD                  float64 `gorm:"column:pago_usd"`
 	PagoBOB                  float64 `gorm:"column:pago_bob"`
+	DetallePago              string  `gorm:"column:detalle_pago"`
 	SaldoBOB                 float64 `gorm:"column:saldo_bob"`
 	CuotaInicial             float64 `gorm:"column:cuota_inicial"`
 	Saldo                    float64 `gorm:"column:saldo"`
@@ -63,8 +64,9 @@ var QueryVentaVehiculoReporte = `
 		coalesce(vv.precio_usd, vv.precio_total) as precio_usd,
 		coalesce(vv.tipo_cambio_usado, 0) as tipo_cambio_usado,
 		coalesce(vv.monto_bob_calculado, 0) as monto_bob_calculado,
-		coalesce(vv.pago_usd, 0) as pago_usd,
-		coalesce(vv.pago_bob, 0) as pago_bob,
+		coalesce(pv.total_usd, vv.pago_usd, 0) as pago_usd,
+		coalesce(pv.total_bob, vv.pago_bob, 0) as pago_bob,
+		coalesce(pv.detalle_pago, '') as detalle_pago,
 		coalesce(vv.saldo_bob, 0) as saldo_bob,
 		vv.cuota_inicial,
 		vv.saldo,
@@ -72,7 +74,11 @@ var QueryVentaVehiculoReporte = `
 		to_char(vv.fecha_vencimiento_proforma, 'YYYY-MM-DD') as fecha_vencimiento_proforma,
 		vv.estado_venta,
 		vv.estado_pago,
-		coalesce(vv.metodo_pago, 'Efectivo') as metodo_pago,
+		case
+			when coalesce(pv.cantidad, 0) > 1 then 'Mixto'
+			when coalesce(pv.cantidad, 0) = 1 then pv.unico_metodo
+			else coalesce(vv.metodo_pago, 'Efectivo')
+		end as metodo_pago,
 		vv.estado_entrega,
 		coalesce(to_char(vv.fecha_entrega, 'YYYY-MM-DD'), '') as fecha_entrega,
 		coalesce(vv.referencia_bancaria, '') as referencia_bancaria,
@@ -90,6 +96,16 @@ var QueryVentaVehiculoReporte = `
 	left join categoria_vehiculo cat on cat.id = v.id_categoria
 	left join segmento_vehiculo seg on seg.id = v.id_segmento
 	left join usuarios u on u.id = vv.id_usuario
+	left join lateral (
+		select
+			string_agg(concat(p.moneda, ' ', p.metodo, ' ', p.monto::text), ' | ' order by p.id) as detalle_pago,
+			count(*) as cantidad,
+			max(p.metodo) as unico_metodo,
+			coalesce(sum(case when p.moneda = 'USD' then p.monto else 0 end), 0) as total_usd,
+			coalesce(sum(case when p.moneda = 'BOB' then p.monto else 0 end), 0) as total_bob
+		from pagos_venta p
+		where p.venta_id = vv.id
+	) pv on true
 	where vv.id = ?
 	limit 1`
 
@@ -184,6 +200,7 @@ func makePDFVentaVehiculo(id string) (core.Maroto, VentaVehiculoReporte, error) 
 	addPairRow(m, "Tipo cambio", fmt.Sprintf("%.4f Bs/USD", venta.TipoCambioUsado), "Total BOB", moneyBOBPDF(venta.MontoBOBCalculado))
 	if venta.MetodoPago == "Mixto" {
 		addPairRow(m, "Pago USD", moneyPDF(venta.PagoUSD), "Pago BOB", moneyBOBPDF(venta.PagoBOB))
+		addSingleRow(m, "Detalle pago", emptyPDF(venta.DetallePago))
 	}
 	if venta.TipoVenta == "Reserva" && venta.EstadoVenta == "Completada" {
 		addPairRow(m, "Pago final", moneyPDF(venta.PrecioTotal-venta.CuotaInicial), "Saldo", moneyPDF(venta.Saldo))

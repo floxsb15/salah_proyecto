@@ -102,7 +102,7 @@
             />
           </div>
 
-          <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-5">
+          <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
             <div>
               <span class="text-xs font-semibold uppercase text-gray-500">Precio USD</span>
               <strong class="block text-gray-900">$ {{ formatPrecio(precioUnidad) }}</strong>
@@ -114,14 +114,6 @@
             <div>
               <span class="text-xs font-semibold uppercase text-gray-500">Total BOB</span>
               <strong class="block text-gray-900">Bs {{ formatPrecio(montoBOB) }}</strong>
-            </div>
-            <div>
-              <span class="text-xs font-semibold uppercase text-gray-500">{{ esReserva ? 'Monto reservado' : 'Cuota inicial' }}</span>
-              <strong class="block text-gray-900">{{ muestraSaldo ? '$ ' + formatPrecio(montoInicial) : '-' }}</strong>
-            </div>
-            <div>
-              <span class="text-xs font-semibold uppercase text-gray-500">Resta</span>
-              <strong class="block text-gray-900">{{ muestraSaldo ? '$ ' + formatPrecio(saldo) : '-' }}</strong>
             </div>
           </div>
 
@@ -135,69 +127,53 @@
             <Select id="estado_pago" v-model="form.estado_pago" :options="estadosPago" :disabled="esReserva || esContado" fluid size="small" />
           </div>
 
-          <div class="flex flex-col gap-1">
+          <div v-if="!esCredito" class="flex flex-col gap-1">
             <label for="metodo_pago">Metodo de pago</label>
-            <Select id="metodo_pago" v-model="form.metodo_pago" :options="metodosPago" fluid size="small" />
+            <Select id="metodo_pago" v-model="form.metodo_pago" :options="metodosPagoDisponibles" fluid size="small" />
           </div>
 
-          <template v-if="esPagoMixto && !esReserva">
-            <div class="flex flex-col gap-1">
-              <label for="pago_usd">Pago en USD</label>
-              <InputNumber id="pago_usd" v-model="form.pago_usd" mode="currency" currency="USD" locale="es-BO" :min="0" fluid size="small" />
-            </div>
+          <template v-if="esPagoMixto && !esReserva && !esCredito">
+            <section class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-900">Detalle de pago</h3>
+                </div>
+                <Button label="Agregar pago" icon="pi pi-plus" size="small" severity="secondary" type="button" @click="agregarPago" />
+              </div>
 
-            <div class="flex flex-col gap-1">
-              <label for="pago_bob">Pago en BOB</label>
-              <InputNumber id="pago_bob" v-model="form.pago_bob" mode="currency" currency="BOB" locale="es-BO" :min="0" fluid size="small" />
-            </div>
+              <div v-for="(pago, index) in form.pagos" :key="pago.key" class="grid grid-cols-1 gap-2 md:grid-cols-[9rem_13rem_1fr_2.5rem]">
+                <Select v-model="pago.moneda" :options="monedasPago" placeholder="Moneda" fluid size="small" />
+                <Select v-model="pago.metodo" :options="metodosPagoMoneda" placeholder="Metodo" fluid size="small" />
+                <InputNumber v-model="pago.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" placeholder="Monto" fluid size="small" />
+                <Button icon="pi pi-trash" severity="danger" text rounded type="button" aria-label="Eliminar pago" @click="eliminarPago(index)" />
+              </div>
+
+              <p v-if="pagoMixtoExcedeTotal" class="text-sm font-semibold text-red-600">
+                El pagado supera el total de la venta.
+              </p>
+            </section>
 
             <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
               <div>
                 <span class="text-xs font-semibold uppercase text-gray-500">Pagado equivalente USD</span>
-                <strong class="block text-gray-900">$ {{ formatPrecio(pagoMixtoUSD) }}</strong>
+                <strong class="block text-gray-900">$ {{ formatPrecio(pagoDetalleUSD) }}</strong>
               </div>
               <div>
                 <span class="text-xs font-semibold uppercase text-gray-500">Saldo USD</span>
-                <strong class="block text-gray-900">$ {{ formatPrecio(saldoMixtoUSD) }}</strong>
+                <strong class="block text-gray-900">$ {{ formatPrecio(saldoDetalleUSD) }}</strong>
               </div>
               <div>
                 <span class="text-xs font-semibold uppercase text-gray-500">Saldo BOB</span>
-                <strong class="block text-gray-900">Bs {{ formatPrecio(saldoMixtoBOB) }}</strong>
+                <strong class="block text-gray-900">Bs {{ formatPrecio(saldoDetalleBOB) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Estado sugerido</span>
+                <strong class="block text-gray-900">{{ estadoPagoSugerido }}</strong>
               </div>
             </div>
           </template>
 
-          <div class="flex flex-col gap-1">
-            <label for="estado_entrega">Estado de entrega</label>
-            <Select id="estado_entrega" v-model="form.estado_entrega" :options="estadosEntrega" :disabled="esReserva" fluid size="small" />
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <label for="fecha_entrega">Fecha de entrega</label>
-            <InputText id="fecha_entrega" v-model="form.fecha_entrega" type="date" fluid size="small" />
-          </div>
-
           <template v-if="esCredito">
-            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
-              <div>
-                <span class="text-xs font-semibold uppercase text-gray-500">Monto financiado</span>
-                <strong class="block text-gray-900">$ {{ formatPrecio(montoFinanciado) }}</strong>
-              </div>
-              <div>
-                <span class="text-xs font-semibold uppercase text-gray-500">Monto por cuota</span>
-                <strong class="block text-gray-900">$ {{ formatPrecio(montoCuota) }}</strong>
-              </div>
-              <div>
-                <span class="text-xs font-semibold uppercase text-gray-500">Estado inicial</span>
-                <strong class="block text-gray-900">en_credito</strong>
-              </div>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <label for="monto_inicial">Monto inicial</label>
-              <InputNumber id="monto_inicial" v-model="form.monto_inicial" mode="currency" currency="USD" locale="es-BO" :min="0" :max="precioTotal" fluid size="small" />
-            </div>
-
             <div class="flex flex-col gap-1">
               <label for="numero_cuotas">Numero de cuotas</label>
               <InputNumber id="numero_cuotas" v-model="form.numero_cuotas" :min="1" :useGrouping="false" fluid size="small" />
@@ -212,7 +188,67 @@
               <label for="frecuencia_pago">Frecuencia</label>
               <Select id="frecuencia_pago" v-model="form.frecuencia_pago" :options="frecuenciasPago" fluid size="small" />
             </div>
+
+            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-4">
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Monto financiado</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(montoFinanciado) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Monto por cuota</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(montoCuota) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Resta</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(saldo) }}</strong>
+              </div>
+            </div>
+
+            <section class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-900">Detalle de pago de cuota</h3>
+                </div>
+                <Button label="Agregar pago" icon="pi pi-plus" size="small" severity="secondary" type="button" @click="agregarPago" />
+              </div>
+
+              <div v-for="(pago, index) in form.pagos" :key="pago.key" class="grid grid-cols-1 gap-2 md:grid-cols-[9rem_13rem_1fr_2.5rem]">
+                <Select v-model="pago.moneda" :options="monedasPago" placeholder="Moneda" fluid size="small" />
+                <Select v-model="pago.metodo" :options="metodosPagoMoneda" placeholder="Metodo" fluid size="small" />
+                <InputNumber v-model="pago.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" placeholder="Monto" fluid size="small" />
+                <Button icon="pi pi-trash" severity="danger" text rounded type="button" aria-label="Eliminar pago" @click="eliminarPago(index)" />
+              </div>
+
+              <p v-if="pagoMixtoExcedeTotal" class="text-sm font-semibold text-red-600">
+                El pagado supera el total de la venta.
+              </p>
+            </section>
+
+            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Pagado equivalente USD</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(pagoDetalleUSD) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Saldo USD</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(saldoDetalleUSD) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Saldo BOB</span>
+                <strong class="block text-gray-900">Bs {{ formatPrecio(saldoDetalleBOB) }}</strong>
+              </div>
+            </div>
           </template>
+
+          <div class="flex flex-col gap-1">
+            <label for="estado_entrega">Estado de entrega</label>
+            <Select id="estado_entrega" v-model="form.estado_entrega" :options="estadosEntrega" :disabled="esReserva" fluid size="small" />
+          </div>
+
+          <div class="flex flex-col gap-1">
+            <label for="fecha_entrega">Fecha de entrega</label>
+            <InputText id="fecha_entrega" v-model="form.fecha_entrega" type="date" fluid size="small" />
+          </div>
 
           <template v-if="esCreditoBancario">
             <div class="flex flex-col gap-1">
@@ -279,6 +315,49 @@
             />
           </div>
 
+          <template v-if="esReserva">
+            <section class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-gray-900">Detalle de pago</h3>
+                </div>
+                <Button v-if="esPagoMixto" label="Agregar pago" icon="pi pi-plus" size="small" severity="secondary" type="button" @click="agregarPago" />
+              </div>
+
+              <div v-if="!esPagoMixto" class="grid grid-cols-1 gap-2 md:grid-cols-[9rem_13rem_1fr]">
+                <Select v-model="form.pagos[0].moneda" :options="monedasPago" placeholder="Moneda" fluid size="small" />
+                <Select v-model="form.metodo_pago" :options="metodosPagoMoneda" placeholder="Metodo" fluid size="small" />
+                <InputNumber v-model="form.pagos[0].monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" placeholder="Monto" fluid size="small" />
+              </div>
+
+              <div v-for="(pago, index) in form.pagos" v-else :key="pago.key" class="grid grid-cols-1 gap-2 md:grid-cols-[9rem_13rem_1fr_2.5rem]">
+                <Select v-model="pago.moneda" :options="monedasPago" placeholder="Moneda" fluid size="small" />
+                <Select v-model="pago.metodo" :options="metodosPagoMoneda" placeholder="Metodo" fluid size="small" />
+                <InputNumber v-model="pago.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" placeholder="Monto" fluid size="small" />
+                <Button icon="pi pi-trash" severity="danger" text rounded type="button" aria-label="Eliminar pago" @click="eliminarPago(index)" />
+              </div>
+
+              <p v-if="pagoMixtoExcedeTotal" class="text-sm font-semibold text-red-600">
+                El pagado supera el monto de reserva.
+              </p>
+            </section>
+
+            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Pagado equivalente USD</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(pagoDetalleUSD) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Saldo reserva USD</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(saldoDetalleUSD) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Estado sugerido</span>
+                <strong class="block text-gray-900">{{ estadoPagoSugerido }}</strong>
+              </div>
+            </div>
+          </template>
+
           <div class="flex flex-col gap-1 lg:col-span-2">
             <label for="observacion">Observacion</label>
             <Textarea id="observacion" v-model="form.observacion" rows="3" auto-resize fluid />
@@ -332,8 +411,10 @@ const documentoGarantia = ref<File | null>(null);
 const documentoGarantiaNombre = ref('');
 const tiposVenta = ref(['Contado', 'credito_directo', 'credito_bancario', 'Reserva']);
 const estadosVenta = ref(['Registrada', 'Completada', 'en_credito']);
-const estadosPago = ref(['Pendiente', 'Pagado completo']);
+const estadosPago = ref(['Pendiente', 'Parcial', 'Pagado completo']);
 const metodosPago = ref(['QR', 'Transferencia', 'Efectivo', 'Mixto']);
+const metodosPagoMoneda = ref(['QR', 'Transferencia', 'Efectivo']);
+const monedasPago = ref(['USD', 'BOB']);
 const estadosEntrega = ref(['Pendiente', 'Entregado']);
 const estadosDesembolso = ref(['Pendiente', 'Desembolsado']);
 const frecuenciasPago = ref(['mensual', 'quincenal', 'semanal']);
@@ -346,6 +427,9 @@ const form = reactive({
   tipo_cambio: null as number | null,
   pago_usd: 0,
   pago_bob: 0,
+  pagos: [
+    crearPago()
+  ],
   validez_proforma_dias: 15,
   estado_venta: 'Completada',
   estado_pago: 'Pagado completo',
@@ -374,22 +458,50 @@ const esReserva = computed(() => form.tipo_venta === 'Reserva');
 const esCreditoDirecto = computed(() => form.tipo_venta === 'credito_directo');
 const esCreditoBancario = computed(() => form.tipo_venta === 'credito_bancario');
 const esCredito = computed(() => esCreditoDirecto.value || esCreditoBancario.value || form.tipo_venta === 'Credito');
+const metodosPagoDisponibles = computed(() => esCredito.value ? metodosPagoMoneda.value : metodosPago.value);
 const esPagoMixto = computed(() => form.metodo_pago === 'Mixto');
-const muestraSaldo = computed(() => esCredito.value || esReserva.value);
-const pagoMixtoUSD = computed(() => Number(form.pago_usd || 0) + (tipoCambio.value > 0 ? Number(form.pago_bob || 0) / tipoCambio.value : 0));
-const saldoMixtoUSD = computed(() => Math.max(precioTotal.value - pagoMixtoUSD.value, 0));
-const saldoMixtoBOB = computed(() => saldoMixtoUSD.value * tipoCambio.value);
+const muestraDetallePago = computed(() => (esPagoMixto.value && !esReserva.value) || esCredito.value || esReserva.value);
+const pagosParaCalculo = computed(() => {
+  if (esReserva.value && !esPagoMixto.value) {
+    return form.pagos.slice(0, 1);
+  }
+  return form.pagos;
+});
+const pagoMixtoUSDDirecto = computed(() => pagosParaCalculo.value
+  .filter((pago: any) => pago.moneda === 'USD')
+  .reduce((total: number, pago: any) => total + Number(pago.monto || 0), 0));
+const pagoMixtoBOBDirecto = computed(() => pagosParaCalculo.value
+  .filter((pago: any) => pago.moneda === 'BOB')
+  .reduce((total: number, pago: any) => total + Number(pago.monto || 0), 0));
+const pagoMixtoUSD = computed(() => pagoMixtoUSDDirecto.value + (tipoCambio.value > 0 ? pagoMixtoBOBDirecto.value / tipoCambio.value : 0));
+const objetivoDetallePagoUSD = computed(() => esReserva.value ? Number(form.monto_reserva || 0) : precioTotal.value);
+const pagoDetalleUSD = computed(() => pagoMixtoUSD.value);
+const saldoDetalleUSD = computed(() => Math.max(objetivoDetallePagoUSD.value - pagoDetalleUSD.value, 0));
+const saldoDetalleBOB = computed(() => saldoDetalleUSD.value * tipoCambio.value);
+const pagoMixtoExcedeTotal = computed(() => muestraDetallePago.value && pagoDetalleUSD.value > objetivoDetallePagoUSD.value);
+const estadoPagoSugerido = computed(() => {
+  if (!muestraDetallePago.value) return form.estado_pago;
+  if (pagoDetalleUSD.value <= 0) return 'Pendiente';
+  if (pagoDetalleUSD.value >= objetivoDetallePagoUSD.value) return 'Pagado completo';
+  return 'Parcial';
+});
+const montoInicialUSD = computed(() => {
+  if (esCredito.value) {
+    return pagoDetalleUSD.value;
+  }
+  return Number(form.monto_inicial || 0);
+});
 const montoInicial = computed(() => {
   if (esReserva.value) {
     return Number(form.monto_reserva || 0);
   }
   if (esCredito.value) {
-    return Number(form.monto_inicial || 0);
+    return montoInicialUSD.value;
   }
   return 0;
 });
 const saldo = computed(() => Math.max(precioTotal.value - montoInicial.value, 0));
-const montoFinanciado = computed(() => esCredito.value ? Math.max(precioTotal.value - Number(form.monto_inicial || 0), 0) : 0);
+const montoFinanciado = computed(() => esCredito.value ? Math.max(precioTotal.value - montoInicialUSD.value, 0) : 0);
 const montoCuota = computed(() => Number(form.numero_cuotas || 0) > 0 ? montoFinanciado.value / Number(form.numero_cuotas || 1) : 0);
 const cantidadReservadaVigente = computed(() => {
   const idVehiculo = Number(route.query.id || 0);
@@ -413,9 +525,6 @@ watch(() => form.tipo_venta, () => {
   if (esReserva.value) {
     form.estado_venta = 'Registrada';
     form.estado_pago = 'Pagado completo';
-    if (form.metodo_pago === 'Mixto') {
-      form.metodo_pago = 'Efectivo';
-    }
     form.estado_entrega = 'Pendiente';
     form.fecha_entrega = '';
     return;
@@ -430,8 +539,8 @@ watch(() => form.tipo_venta, () => {
   if (esCredito.value) {
     form.estado_venta = 'en_credito';
     form.estado_pago = 'Pendiente';
-    if (Number(form.monto_inicial || 0) <= 0) {
-      form.monto_inicial = Number((precioTotal.value * 0.30).toFixed(2));
+    if (form.metodo_pago === 'Mixto') {
+      form.metodo_pago = 'Efectivo';
     }
   }
 
@@ -443,6 +552,12 @@ watch(() => form.tipo_venta, () => {
 watch(precioTotal, () => {
   if (Number(form.monto_reserva || 0) > precioTotal.value) {
     form.monto_reserva = precioTotal.value;
+  }
+});
+
+watch(estadoPagoSugerido, (estado) => {
+  if (muestraDetallePago.value) {
+    form.estado_pago = estado;
   }
 });
 
@@ -496,10 +611,6 @@ async function registrarVenta() {
     toast.add({ severity: 'warn', summary: 'Ingrese el tipo de cambio', life: 3000 });
     return;
   }
-  if (esPagoMixto.value && !esReserva.value && pagoMixtoUSD.value > precioTotal.value) {
-    toast.add({ severity: 'warn', summary: 'Pago mixto mayor al precio total', life: 3000 });
-    return;
-  }
   if (esReserva.value && Number(form.monto_reserva || 0) <= 0) {
     toast.add({ severity: 'warn', summary: 'Ingrese el monto de reserva', life: 3000 });
     return;
@@ -508,9 +619,16 @@ async function registrarVenta() {
     toast.add({ severity: 'warn', summary: 'Reserva mayor al precio total', life: 3000 });
     return;
   }
+  if (muestraDetallePago.value && pagoMixtoExcedeTotal.value) {
+    toast.add({ severity: 'warn', summary: esReserva.value ? 'Pago mayor al monto de reserva' : 'Pago mayor al precio total', life: 3000 });
+    return;
+  }
+  if (muestraDetallePago.value && !validarDetallePago()) {
+    return;
+  }
   if (esCredito.value) {
-    if (Number(form.monto_inicial || 0) <= 0 || Number(form.monto_inicial || 0) >= precioTotal.value) {
-      toast.add({ severity: 'warn', summary: 'Monto inicial no valido', life: 3000 });
+    if (montoInicialUSD.value <= 0 || montoInicialUSD.value >= precioTotal.value) {
+      toast.add({ severity: 'warn', summary: 'Detalle de pago no valido', life: 3000 });
       return;
     }
     if (Number(form.numero_cuotas || 0) <= 0) {
@@ -571,16 +689,17 @@ function construirVentaFormData(userId: number) {
   formData.append('tipo_venta', form.tipo_venta);
   formData.append('cantidad', String(Number(form.cantidad)));
   formData.append('tipo_cambio', String(tipoCambio.value));
-  formData.append('pago_usd', String(esPagoMixto.value && !esReserva.value ? Number(form.pago_usd || 0) : 0));
-  formData.append('pago_bob', String(esPagoMixto.value && !esReserva.value ? Number(form.pago_bob || 0) : 0));
+  formData.append('pago_usd', String(muestraDetallePago.value ? Number(pagoMixtoUSDDirecto.value || 0) : 0));
+  formData.append('pago_bob', String(muestraDetallePago.value ? Number(pagoMixtoBOBDirecto.value || 0) : 0));
+  formData.append('pagos', JSON.stringify(muestraDetallePago.value ? detallePagoPayload() : []));
   formData.append('validez_proforma_dias', String(Number(form.validez_proforma_dias || 15)));
   formData.append('estado_venta', esReserva.value ? 'Registrada' : form.estado_venta);
   formData.append('estado_pago', form.estado_pago);
-  formData.append('metodo_pago', form.metodo_pago);
+  formData.append('metodo_pago', esCredito.value || esReserva.value ? resumenDetallePago() : form.metodo_pago);
   formData.append('estado_entrega', esReserva.value ? 'Pendiente' : form.estado_entrega);
   formData.append('fecha_entrega', esReserva.value ? '' : form.fecha_entrega);
   formData.append('monto_reserva', String(esReserva.value ? Number(form.monto_reserva || 0) : 0));
-  formData.append('monto_inicial', String(esCredito.value ? Number(form.monto_inicial || 0) : 0));
+  formData.append('monto_inicial', String(esCredito.value ? Number(montoInicialUSD.value || 0) : 0));
   formData.append('numero_cuotas', String(esCredito.value ? Number(form.numero_cuotas || 0) : 0));
   formData.append('fecha_inicio_credito', esCredito.value ? form.fecha_inicio_credito : '');
   formData.append('frecuencia_pago', esCredito.value ? form.frecuencia_pago : '');
@@ -594,6 +713,77 @@ function construirVentaFormData(userId: number) {
     formData.append('documento_garantia', documentoGarantia.value);
   }
   return formData;
+}
+
+function crearPago() {
+  return {
+    key: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    moneda: 'USD',
+    metodo: 'Efectivo',
+    monto: 0
+  };
+}
+
+function agregarPago() {
+  form.pagos.push(crearPago());
+}
+
+function eliminarPago(index: number) {
+  form.pagos.splice(index, 1);
+  if (form.pagos.length === 0) {
+    agregarPago();
+  }
+}
+
+function detallePagoPayload() {
+  if (esReserva.value && !esPagoMixto.value) {
+    return [{
+      moneda: form.pagos[0]?.moneda || 'USD',
+      metodo: form.metodo_pago,
+      monto: Number(form.pagos[0]?.monto || 0)
+    }];
+  }
+
+  return form.pagos.map((pago: any) => ({
+    moneda: pago.moneda,
+    metodo: pago.metodo,
+    monto: Number(pago.monto || 0)
+  }));
+}
+
+function resumenDetallePago() {
+  const pagosValidos = detallePagoPayload().filter((pago: any) => pago.moneda && pago.metodo && Number(pago.monto || 0) > 0);
+  if (pagosValidos.length === 0) {
+    return 'Efectivo';
+  }
+
+  const primerPago = pagosValidos[0];
+  const esUnicoTipo = pagosValidos.every((pago: any) =>
+    pago.moneda === primerPago.moneda && pago.metodo === primerPago.metodo
+  );
+  return esUnicoTipo ? primerPago.metodo : 'Mixto';
+}
+
+function validarDetallePago() {
+  if (form.pagos.length === 0) {
+    toast.add({ severity: 'warn', summary: 'Agregue al menos una linea de pago', life: 3000 });
+    return false;
+  }
+
+  const lineaInvalida = form.pagos.find((pago: any) =>
+    !pago.moneda || !pago.metodo || Number(pago.monto || 0) <= 0
+  );
+  if (lineaInvalida) {
+    toast.add({ severity: 'warn', summary: 'Complete moneda, metodo y monto mayor a cero en cada linea', life: 4000 });
+    return false;
+  }
+
+  if (pagoMixtoExcedeTotal.value) {
+    toast.add({ severity: 'warn', summary: esReserva.value ? 'Pago mayor al monto de reserva' : 'Pago mayor al precio total', life: 3000 });
+    return false;
+  }
+
+  return true;
 }
 
 function onDocumentoGarantiaSelect(event: any) {
