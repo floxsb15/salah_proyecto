@@ -3,6 +3,10 @@ package functions
 import (
 	"backend-restaurant-delitto/internal/db"
 	"backend-restaurant-delitto/internal/models"
+	"backend-restaurant-delitto/internal/security"
+	"errors"
+	"os"
+	"strings"
 )
 
 func CreacionInicial() error {
@@ -185,16 +189,26 @@ func PrimerUsuario() error {
 	}
 
 	if count == 0 {
+		initialUser := strings.TrimSpace(os.Getenv("INITIAL_ADMIN_USER"))
+		initialPassword := os.Getenv("INITIAL_ADMIN_PASSWORD")
+		if initialUser == "" || initialPassword == "" {
+			return errors.New("INITIAL_ADMIN_USER e INITIAL_ADMIN_PASSWORD son obligatorios para crear el primer administrador")
+		}
+		hashedPassword, err := security.HashPassword(initialPassword)
+		if err != nil {
+			return err
+		}
 		var id_admin uint
 		query := `select id from roles where nombre = 'admin' limit 1`
 		if err := db.GDB.Raw(query).Scan(&id_admin).Error; err != nil {
 			return err
 		}
 		usuario := models.Usuario{
-			Usuario: "user",
-			Contra:  "admin",
-			IDRol:   id_admin,
-			Estado:  true,
+			Usuario:        initialUser,
+			Contra:         hashedPassword,
+			IDRol:          id_admin,
+			Estado:         true,
+			SessionVersion: 1,
 		}
 		if err := db.GDB.Create(&usuario).Error; err != nil {
 			return err

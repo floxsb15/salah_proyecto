@@ -320,10 +320,10 @@ const resolver = ref(zodResolver(
       }),
     usuario: z.string().min(1, {message: 'Usuario requerido.'}),
     contra: z.string()
-      .min(8, { message: 'La contrasena debe tener al menos 8 caracteres.' })
+      .min(12, { message: 'La contrasena debe tener al menos 12 caracteres.' })
       .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, { message: 'La contrasena debe contener letras y numeros.' }),
     confirmarContra: z.string()
-      .min(8, { message: 'La contrasena debe tener al menos 8 caracteres.' })
+      .min(12, { message: 'La contrasena debe tener al menos 12 caracteres.' })
       .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, { message: 'La contrasena debe contener letras y numeros.' }),
     rol: z.string().min(1, { message: 'Rol requerido.' })
   }).refine(data => data.contra === data.confirmarContra, {

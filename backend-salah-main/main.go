@@ -5,11 +5,18 @@ import (
 	"backend-restaurant-delitto/internal/functions"
 	"backend-restaurant-delitto/internal/models"
 	"backend-restaurant-delitto/internal/routers"
+	"backend-restaurant-delitto/internal/security"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"strconv"
+	"strings"
+	"syscall"
+	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
@@ -18,11 +25,12 @@ func main() {
 	var err error
 
 	// Cargar el archivo .env
-	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Error al conectarse a la base de datos: %v", err)
+	if err := godotenv.Load(".env"); err != nil && !os.IsNotExist(err) {
+		log.Printf("No se pudo cargar .env: %v", err)
 	}
-
-	port := "5000"
+	if err := security.ValidateConfiguration(); err != nil {
+		log.Fatal("Configuracion de seguridad invalida: ", err)
+	}
 
 	err = db.Connection()
 	if err != nil {
@@ -30,6 +38,7 @@ func main() {
 		return
 	}
 
+<<<<<<< HEAD
 	if err := db.GDB.AutoMigrate(
 		/* migraciones */
 		&models.Rol{},
@@ -48,21 +57,86 @@ func main() {
 	); err != nil {
 		log.Fatal("Error al migrar los modelos de la db:", err)
 	}
+=======
+	if migrationsEnabled() {
+		if err := db.GDB.AutoMigrate(
+			/* migraciones */
+			&models.Rol{},
+			&models.CategoriaVehiculo{},
+			&models.SegmentoVehiculo{},
+			&models.MarcaVehiculo{},
+			&models.AnioVehiculo{},
+			&models.Usuario{},
+			&models.Cliente{},
+			&models.Vehiculo{},
+			&models.VentaVehiculo{},
+			&models.CuotaCredito{},
+			&models.GastoVario{},
+			&models.Movimiento{},
+		); err != nil {
+			log.Fatal("Error al migrar los modelos de la db:", err)
+		}
+>>>>>>> ce0f81ff614f699155429184a484737c5946b6a6
 
-	if err := functions.CreacionInicial(); err != nil {
-		log.Fatal("Error al iniciar los datos predeterminados")
+		if err := functions.CreacionInicial(); err != nil {
+			log.Fatal("Error al iniciar los datos predeterminados: ", err)
+		}
+		if err := security.MigratePlaintextPasswords(); err != nil {
+			log.Fatal("Error al migrar contrasenas heredadas: ", err)
+		}
 	}
 
 	r := mux.NewRouter()
 	routers.InitEndPoints(r)
 
-	headersOk := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "X-User-Id"})
-	originsOk := handlers.AllowedOrigins([]string{"*"})
-	methodsOk := handlers.AllowedMethods([]string{"GET", "HEAD", "POST", "PUT", "PATCH", "OPTIONS", "DELETE"})
-
-	// Iniciar el servidor
-	fmt.Printf("Servidor corriendo en puerto: %s\n", port)
-	if err := http.ListenAndServe(":"+port, handlers.CORS(originsOk, headersOk, methodsOk)(r)); err != nil {
-		log.Fatal("Error al iniciar el servidor:", err)
+	host := envOrDefault("SERVER_HOST", "127.0.0.1")
+	port := envOrDefault("SERVER_PORT", "5000")
+	server := &http.Server{
+		Addr:              host + ":" + port,
+		Handler:           security.SecurityHeaders(r),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       35 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
+
+	shutdownContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	serverErrors := make(chan error, 1)
+	go func() {
+		fmt.Printf("Servidor corriendo en http://%s\n", server.Addr)
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	select {
+	case err := <-serverErrors:
+		if err != nil && err != http.ErrServerClosed {
+			log.Fatal("Error al iniciar el servidor: ", err)
+		}
+	case <-shutdownContext.Done():
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(ctx); err != nil {
+			log.Printf("Cierre forzado del servidor: %v", err)
+		}
+	}
+}
+
+func migrationsEnabled() bool {
+	if value := strings.TrimSpace(os.Getenv("RUN_MIGRATIONS")); value != "" {
+		enabled, err := strconv.ParseBool(value)
+		if err != nil {
+			log.Fatal("RUN_MIGRATIONS debe ser true o false")
+		}
+		return enabled
+	}
+	return !strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production")
+}
+
+func envOrDefault(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value
+	}
+	return fallback
 }

@@ -51,7 +51,7 @@ func ObtenerMarcasVehiculos(w http.ResponseWriter, r *http.Request) {
 func AgregarMarcaVehiculo(w http.ResponseWriter, r *http.Request) {
 	var marca MarcaVehiculoMOD
 	if err := json.NewDecoder(r.Body).Decode(&marca); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -101,7 +101,7 @@ func ObtenerAniosVehiculos(w http.ResponseWriter, r *http.Request) {
 func AgregarAnioVehiculo(w http.ResponseWriter, r *http.Request) {
 	var anio AnioVehiculoMOD
 	if err := json.NewDecoder(r.Body).Decode(&anio); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 

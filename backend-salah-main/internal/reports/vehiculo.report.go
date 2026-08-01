@@ -38,13 +38,13 @@ type VehiculoReporte struct {
 func ReporteProductos(w http.ResponseWriter, r *http.Request) {
 	m, err := makePDFVehiculos()
 	if err != nil {
-		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		respondInternalError(w, "Error al obtener datos del reporte de vehiculos", err)
 		return
 	}
 
 	doc, err := m.Generate()
 	if err != nil {
-		http.Error(w, "Error al generar pdf: "+err.Error(), http.StatusInternalServerError)
+		respondInternalError(w, "Error al generar el reporte de vehiculos", err)
 		return
 	}
 

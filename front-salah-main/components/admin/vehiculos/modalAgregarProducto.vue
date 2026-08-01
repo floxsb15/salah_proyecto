@@ -432,8 +432,7 @@ async function onFormSubmit({ valid } : any ) {
 
       await $fetch(server.HOST + '/api/v1/vehiculos', {
         method: 'POST',
-        body: formData,
-        headers: getAuthHeaders()
+        body: formData
       })
       emit('update'), emit('success')
       visible.value = false
@@ -475,23 +474,6 @@ function obtenerGarantia() {
     partes.push(`${garantiaKm.value} km`)
   }
   return partes.join(' o ')
-}
-
-function getAuthHeaders() {
-  try {
-    const user = localStorage.getItem('user')
-    const parsed = user ? JSON.parse(user) : null
-    const headers: Record<string, string> = {}
-    if (parsed?.token) {
-      headers.Authorization = `Bearer ${parsed.token}`
-    }
-    if (parsed?.id) {
-      headers['X-User-Id'] = String(parsed.id)
-    }
-    return headers
-  } catch {
-    return {}
-  }
 }
 
 function getActorUserRol() {

@@ -55,7 +55,7 @@ func AgregarCategoria(w http.ResponseWriter, r *http.Request) {
 	var categoria CategoriaMOD
 
 	if err := json.NewDecoder(r.Body).Decode(&categoria); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -95,7 +95,7 @@ func ModificarCategoria(w http.ResponseWriter, r *http.Request) {
 
 	var categoriaActualizado CategoriaMOD
 	if err := json.NewDecoder(r.Body).Decode(&categoriaActualizado); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
 

@@ -13,7 +13,7 @@ var Usuarios = `
 	order by u.id asc;`
 
 var Usuario = `
-	select u.id, u.nombre, u.apellido, u.ci, u.celular, u.direccion, u.foto, u.usuario, u.contra,
+	select u.id, u.nombre, u.apellido, u.ci, u.celular, u.direccion, u.foto, u.usuario,
 		CASE 
 			WHEN u.estado THEN 'Activo'
 			ELSE 'Inactivo'

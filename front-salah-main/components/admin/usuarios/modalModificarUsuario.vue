@@ -362,8 +362,8 @@ const getSchema = () => z.object({
     })
 }).superRefine(({ contra, confirmarContra }, ctx) => {
   if (contra && contra.length > 0) {
-    if (contra.length < 5) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La contrasena debe tener al menos 5 caracteres.', path: ['contra'] })
+    if (contra.length < 12) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'La contrasena debe tener al menos 12 caracteres.', path: ['contra'] })
     }
     if (contra !== confirmarContra) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Las contrasenas no coinciden.', path: ['confirmarContra'] })

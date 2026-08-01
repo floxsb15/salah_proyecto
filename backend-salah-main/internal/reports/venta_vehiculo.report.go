@@ -2,6 +2,7 @@ package reports
 
 import (
 	"backend-restaurant-delitto/internal/db"
+	"backend-restaurant-delitto/internal/security"
 	"fmt"
 	"net/http"
 	"time"
@@ -111,15 +112,27 @@ var QueryVentaVehiculoReporte = `
 
 func ReporteVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+	principal, ok := security.PrincipalFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
+		return
+	}
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+		var count int64
+		if err := db.GDB.Table("ventas_vehiculos").Where("id = ? AND id_usuario = ?", id, principal.ID).Count(&count).Error; err != nil || count != 1 {
+			http.Error(w, "Venta no encontrada", http.StatusNotFound)
+			return
+		}
+	}
 	m, venta, err := makePDFVentaVehiculo(id)
 	if err != nil {
-		http.Error(w, "Error: "+err.Error(), http.StatusInternalServerError)
+		respondInternalError(w, "Error al obtener datos del reporte de venta", err)
 		return
 	}
 
 	doc, err := m.Generate()
 	if err != nil {
-		http.Error(w, "Error al generar pdf: "+err.Error(), http.StatusInternalServerError)
+		respondInternalError(w, "Error al generar el reporte de venta", err)
 		return
 	}
 

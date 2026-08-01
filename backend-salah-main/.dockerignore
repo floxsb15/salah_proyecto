@@ -1,0 +1,6 @@
+.git
+.gocache
+.env
+*.log
+*.exe
+internal/images

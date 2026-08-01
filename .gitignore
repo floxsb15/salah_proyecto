@@ -1,10 +1,12 @@
-@"
-# Frontend Vue
+# Frontend Vue/Nuxt
 front-salah-main/node_modules/
+front-salah-main/.nuxt/
+front-salah-main/.output/
 front-salah-main/dist/
 front-salah-main/.vite/
 
 # Backend Go
+backend-salah-main/.gocache/
 backend-salah-main/tmp/
 backend-salah-main/bin/
 backend-salah-main/*.exe
@@ -14,18 +16,18 @@ backend-salah-main/*.out
 # Variables privadas
 .env
 .env.*
+!.env.example
 backend-salah-main/.env
+!backend-salah-main/.env.example
 front-salah-main/.env
+!front-salah-main/.env.example
 
-# Carpetas que no pertenecen al proyecto
+# Herramientas y temporales
 .agents/
 .idea/
 .tmp/
-
-# Archivos adicionales
 *.zip
 *.pdf
 *.log
 Thumbs.db
 .DS_Store
-"@ | Set-Content -Encoding UTF8 .gitignore

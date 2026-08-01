@@ -503,7 +503,7 @@ function imprimirCuotas() {
       <td>${cuota.monto_bob_pagado ? 'Bs ' + formatPrecio(cuota.monto_bob_pagado) : '-'}</td>
       <td>${labelEstadoCuota(cuota.estado)}</td>
       <td>${cuota.fecha_pago ? formatFecha(cuota.fecha_pago) : '-'}</td>
-      <td>${cuota.usuario_pago || '-'}</td>
+      <td>${escapeHtml(cuota.usuario_pago || '-')}</td>
     </tr>
   `).join('');
 
@@ -526,8 +526,8 @@ function imprimirCuotas() {
       <body>
         <h1>Plan de cuotas de credito</h1>
         <p><strong>Credito:</strong> ${creditoSeleccionado.value.id}</p>
-        <p><strong>Cliente:</strong> ${creditoSeleccionado.value.cliente || 'Sin nombre'}</p>
-        <p><strong>Vehiculo:</strong> ${creditoSeleccionado.value.vehiculo || '-'}</p>
+        <p><strong>Cliente:</strong> ${escapeHtml(creditoSeleccionado.value.cliente || 'Sin nombre')}</p>
+        <p><strong>Vehiculo:</strong> ${escapeHtml(creditoSeleccionado.value.vehiculo || '-')}</p>
         <div class="summary">
           <div class="box"><strong>Total:</strong><br>$ ${formatPrecio(creditoSeleccionado.value.precio_total)}</div>
           <div class="box"><strong>Saldo:</strong><br>$ ${formatPrecio(creditoSeleccionado.value.saldo)}</div>
@@ -567,6 +567,15 @@ function formatPrecio(precio: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
+}
+
+function escapeHtml(value: unknown) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 function formatFecha(fecha: string) {

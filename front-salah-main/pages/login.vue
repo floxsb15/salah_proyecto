@@ -12,7 +12,7 @@
       <div class="w-full md:w-1/2 p-8 flex flex-col justify-center">
         <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
 
-        <form @submit.prevent="iniciarSesion" class="flex flex-col gap-4">
+        <form method="post" action="/api/v1/login" @submit.prevent="iniciarSesion" class="flex flex-col gap-4">
 
           <!-- Username Input -->
           <div class="flex flex-col gap-1">
@@ -22,7 +22,7 @@
                 <i class="pi pi-user"></i>
               </InputGroupAddon>
               <InputText 
-                id="usuario" name="usuario" placeholder="Ingrese su nombre de usuario"
+                id="usuario" name="usuario" autocomplete="username" placeholder="Ingrese su nombre de usuario"
                 v-model="initialValues.usuario"
                 :class="{ 'p-invalid': errors.usuario }" 
                 fluid size="small"/>
@@ -42,7 +42,7 @@
                 <i class="pi pi-lock"></i>
               </InputGroupAddon>
               <Password
-                id="contra" name="contra" placeholder="Ingrese su contraseña" 
+                id="contra" name="contra" autocomplete="current-password" placeholder="Ingrese su contraseña"
                 v-model="initialValues.contra"
                 :class="{ 'p-invalid': errors.contra }" 
                 :feedback="false" toggleMask
@@ -118,18 +118,24 @@ async function iniciarSesion() {
       headers: { 'Content-Type': 'application/json' }
     });
 
+<<<<<<< HEAD
     if(['admin', 'contador'].includes(response.rol)){
       localStorage.setItem('user', JSON.stringify(response));
+=======
+    localStorage.setItem('user', JSON.stringify(response));
+    if (response.must_change_password) {
+      router.push('/cambiar-contrasena');
+    } else if(response.rol === 'admin'){
+>>>>>>> ce0f81ff614f699155429184a484737c5946b6a6
       router.push('/admin/dashboard');
     } else if(['encargado de ventas', 'vendedor'].includes(response.rol)){
-      localStorage.setItem('user', JSON.stringify(response));
       router.push('/ventas/catalogo-vehiculos');
     } else {
       toast.add({ severity: 'error', summary: 'Rol no reconocido', detail: 'El rol del usuario no es válido.', life: 3000 });
     }
   } catch (err: any) {
     console.error(err);
-    const errorMessage = err.response?._data?.message || 'Credenciales Incorrectas';
+    const errorMessage = err.response?._data || 'Credenciales incorrectas';
     toast.add({ severity: 'error', summary: 'Error de autenticación', detail: errorMessage, life: 3000 });
   }
 }

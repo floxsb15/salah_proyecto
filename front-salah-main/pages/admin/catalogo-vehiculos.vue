@@ -207,8 +207,7 @@ async function obtenerVehiculos() {
 
   try {
     const res = await $fetch(server.HOST + '/api/v1/vehiculos', {
-      method: 'GET',
-      headers: getAuthHeaders()
+      method: 'GET'
     });
 
     vehiculos.value = Array.isArray(res) ? res : [];
@@ -255,20 +254,4 @@ function imagenActual(vehiculo: any) {
   return imagenes[indiceImagenActual(vehiculo)] || '';
 }
 
-function getAuthHeaders() {
-  try {
-    const user = localStorage.getItem('user');
-    const parsed = user ? JSON.parse(user) : null;
-    const headers: Record<string, string> = {};
-    if (parsed?.token) {
-      headers.Authorization = `Bearer ${parsed.token}`;
-    }
-    if (parsed?.id) {
-      headers['X-User-Id'] = String(parsed.id);
-    }
-    return headers;
-  } catch {
-    return {};
-  }
-}
 </script>

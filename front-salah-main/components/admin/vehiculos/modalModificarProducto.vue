@@ -361,8 +361,7 @@ const margenGanancia = computed(() => Number(initialValues.precio || 0) - Number
 onMounted( async () => {
   try {
     const resValue:any = await $fetch(server.HOST + '/api/v1/vehiculos/' + props.id, {
-      method: 'GET',
-      headers: getAuthHeaders()
+      method: 'GET'
     })
     initialValues.precio = resValue.precio
     initialValues.precio_compra = Number(resValue.precio_compra || 0)
@@ -483,8 +482,7 @@ async function onFormSubmit({ valid } : any ) {
 
       await $fetch(server.HOST + '/api/v1/vehiculos/' + props.id, {
         method: 'PUT',
-        body: formData,
-        headers: getAuthHeaders()
+        body: formData
       })
 
       emit('update'), emit('success')
@@ -546,23 +544,6 @@ function obtenerGarantia() {
     partes.push(`${garantiaKm.value} km`)
   }
   return partes.length > 0 ? partes.join(' o ') : initialValues.garantia
-}
-
-function getAuthHeaders() {
-  try {
-    const user = localStorage.getItem('user')
-    const parsed = user ? JSON.parse(user) : null
-    const headers: Record<string, string> = {}
-    if (parsed?.token) {
-      headers.Authorization = `Bearer ${parsed.token}`
-    }
-    if (parsed?.id) {
-      headers['X-User-Id'] = String(parsed.id)
-    }
-    return headers
-  } catch {
-    return {}
-  }
 }
 
 function getActorUserRol() {
