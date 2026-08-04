@@ -94,6 +94,7 @@
         <template #body="slotProps">
           <div class="flex items-center gap-1">
             <Button
+              v-if="!soloLectura"
               label="Completar"
               icon="pi pi-check"
               size="small"
@@ -135,6 +136,7 @@ const { descargarPDFVenta } = useVentaPdf();
 const ventas = ref<any[]>([]);
 const searchQuery = ref('');
 const estadoFiltro = ref('pendientes');
+const rolUsuario = ref('');
 const estadoFiltros = ref([
   { label: 'Pendientes', value: 'pendientes' },
   { label: 'Completadas', value: 'completadas' },
@@ -143,6 +145,7 @@ const estadoFiltros = ref([
 const loading = ref(true);
 
 const reservas = computed(() => ventas.value.filter((venta: any) => venta.tipo_venta === 'Reserva'));
+const soloLectura = computed(() => rolUsuario.value === 'contador');
 const filteredReservas = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
   const porEstado = reservas.value.filter((venta: any) => {
@@ -171,6 +174,7 @@ const totalReservado = computed(() => filteredReservas.value.reduce((total: numb
 const totalPendiente = computed(() => filteredReservas.value.reduce((total: number, venta: any) => total + Number(venta.saldo || 0), 0));
 
 onMounted(async () => {
+  rolUsuario.value = obtenerRolUsuarioActual();
   await obtenerReservas();
 });
 
@@ -225,5 +229,10 @@ async function descargarVenta(idVenta: number) {
     console.error(err);
     toast.add({ severity: 'error', summary: 'Error al generar PDF', detail: err?.message, life: 4000 });
   }
+}
+
+function obtenerRolUsuarioActual() {
+  const user = localStorage.getItem('user');
+  return user ? String(JSON.parse(user)?.rol || '') : '';
 }
 </script>

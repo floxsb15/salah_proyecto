@@ -32,7 +32,7 @@
     <DataTable
       :value="filteredVentas"
       :loading="loading"
-      tableStyle="min-width: 72rem"
+      tableStyle="width: 100%; table-layout: fixed"
       size="small"
       stripedRows
       removableSort
@@ -49,22 +49,20 @@
       <Column field="id" header="ID" sortable />
       <Column field="fecha" header="Fecha" sortable>
         <template #body="slotProps">
-          {{ formatFecha(slotProps.data.fecha) }}
-        </template>
-      </Column>
-      <Column field="fecha_venta" header="Hora" sortable>
-        <template #body="slotProps">
-          {{ formatHora(slotProps.data.fecha_venta) }}
+          <div>
+            <p>{{ formatFecha(slotProps.data.fecha) }}</p>
+            <p class="text-xs text-gray-500">{{ formatHora(slotProps.data.fecha_venta) }}</p>
+          </div>
         </template>
       </Column>
       <Column field="vendedor" header="Vendedor" sortable>
         <template #body="slotProps">
-          {{ slotProps.data.vendedor || 'Sin vendedor' }}
+          <span class="block truncate">{{ slotProps.data.vendedor || 'Sin vendedor' }}</span>
         </template>
       </Column>
       <Column field="cliente" header="Cliente" sortable>
         <template #body="slotProps">
-          <div>
+          <div class="min-w-0">
             <p class="font-medium text-gray-900">{{ slotProps.data.cliente || 'Sin nombre' }}</p>
             <p class="text-xs text-gray-500">CI/NIT: {{ slotProps.data.ci_cliente || 'N/A' }}</p>
           </div>
@@ -72,50 +70,39 @@
       </Column>
       <Column field="vehiculo" header="Vehiculo" sortable>
         <template #body="slotProps">
-          <div>
+          <div class="min-w-0">
             <p class="font-medium text-gray-900">{{ slotProps.data.vehiculo }}</p>
             <p class="text-xs text-gray-500">{{ slotProps.data.categoria || 'Sin categoria' }}</p>
           </div>
         </template>
       </Column>
       <Column field="tipo_venta" header="Tipo" sortable />
-      <Column field="estado_venta" header="Venta" sortable>
+      <Column field="estado_venta" header="Estados" sortable>
         <template #body="slotProps">
-          <Tag :value="slotProps.data.estado_venta" :severity="severityVenta(slotProps.data)" />
+          <div class="flex flex-col gap-1">
+            <Tag :value="slotProps.data.estado_venta" :severity="severityVenta(slotProps.data)" />
+            <span class="text-xs text-gray-600">{{ slotProps.data.estado_pago }}</span>
+            <span class="text-xs text-gray-500">{{ slotProps.data.estado_entrega }}</span>
+          </div>
         </template>
       </Column>
-      <Column field="estado_pago" header="Pago" sortable />
-      <Column field="metodo_pago" header="Metodo" sortable />
-      <Column field="detalle_pago" header="Detalle pago">
+      <Column field="detalle_pago" header="Pago">
         <template #body="slotProps">
-          {{ formatDetallePago(slotProps.data) }}
+          <div>
+            <p>{{ formatDetallePago(slotProps.data) }}</p>
+            <p class="text-xs text-gray-500">TC {{ formatPrecio(slotProps.data.tipo_cambio_usado) }}</p>
+          </div>
         </template>
       </Column>
-      <Column field="tipo_cambio_usado" header="TC" sortable>
+      <Column field="precio_total" header="Montos" sortable>
         <template #body="slotProps">
-          {{ formatPrecio(slotProps.data.tipo_cambio_usado) }}
-        </template>
-      </Column>
-      <Column field="monto_bob_calculado" header="Total BOB" sortable>
-        <template #body="slotProps">
-          Bs {{ formatPrecio(slotProps.data.monto_bob_calculado) }}
-        </template>
-      </Column>
-      <Column field="estado_entrega" header="Entrega" sortable />
-      <Column field="cantidad" header="Cant." sortable />
-      <Column field="precio_total" header="Total" sortable>
-        <template #body="slotProps">
-          $ {{ formatPrecio(slotProps.data.precio_total) }}
-        </template>
-      </Column>
-      <Column field="cuota_inicial" header="Inicial/Reserva" sortable>
-        <template #body="slotProps">
-          {{ esCreditoOReserva(slotProps.data.tipo_venta) ? '$ ' + formatPrecio(slotProps.data.cuota_inicial) : '-' }}
-        </template>
-      </Column>
-      <Column field="saldo" header="Saldo/Resta" sortable>
-        <template #body="slotProps">
-          {{ esCreditoOReserva(slotProps.data.tipo_venta) ? '$ ' + formatPrecio(slotProps.data.saldo) : '-' }}
+          <div>
+            <p class="font-medium">$ {{ formatPrecio(slotProps.data.precio_total) }}</p>
+            <p class="text-xs text-gray-500">Bs {{ formatPrecio(slotProps.data.monto_bob_calculado) }}</p>
+            <p v-if="esCreditoOReserva(slotProps.data.tipo_venta)" class="text-xs text-gray-500">
+              Ini. $ {{ formatPrecio(slotProps.data.cuota_inicial) }} / Saldo $ {{ formatPrecio(slotProps.data.saldo) }}
+            </p>
+          </div>
         </template>
       </Column>
       <Column field="fecha_vencimiento_proforma" header="Vence" sortable>
@@ -123,11 +110,6 @@
           <span :class="slotProps.data.proforma_vencida ? 'font-semibold text-red-600' : ''">
             {{ formatFecha(slotProps.data.fecha_vencimiento_proforma) }}
           </span>
-        </template>
-      </Column>
-      <Column field="observacion" header="Observacion">
-        <template #body="slotProps">
-          {{ slotProps.data.observacion || 'Sin observacion' }}
         </template>
       </Column>
       <Column header="PDF">

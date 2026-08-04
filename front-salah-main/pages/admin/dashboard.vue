@@ -8,7 +8,17 @@
         <p class="text-sm text-gray-500">Resumen general de ventas, clientes, usuarios y vehiculos.</p>
       </div>
 
-      <Button label="Actualizar" icon="pi pi-refresh" size="small" :loading="loading" @click="cargarDashboard" />
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label class="flex flex-col gap-1 text-sm text-gray-600">
+          <span>Periodo</span>
+          <input
+            v-model="periodoSeleccionado"
+            type="month"
+            class="h-9 rounded-md border border-gray-300 px-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+          />
+        </label>
+        <Button label="Actualizar" icon="pi pi-refresh" size="small" :loading="loading" @click="cargarDashboard" />
+      </div>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -16,7 +26,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-sm text-gray-500">Ventas completadas</p>
-            <p class="text-2xl font-bold text-gray-900">{{ ventasCompletadas.length }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ ventasCompletadasPeriodo.length }}</p>
           </div>
           <i class="pi pi-shopping-cart text-2xl text-yellow-500"></i>
         </div>
@@ -26,7 +36,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-sm text-gray-500">Ingresos USD</p>
-            <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(totalVendidoUSD) }}</p>
+            <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(totalVendidoPeriodoUSD) }}</p>
           </div>
           <i class="pi pi-wallet text-2xl text-emerald-600"></i>
         </div>
@@ -36,7 +46,7 @@
         <div class="flex items-center justify-between gap-3">
           <div>
             <p class="text-sm text-gray-500">Ingresos BOB</p>
-            <p class="text-2xl font-bold text-gray-900">Bs {{ formatPrecio(totalVendidoBOB) }}</p>
+            <p class="text-2xl font-bold text-gray-900">Bs {{ formatPrecio(totalVendidoPeriodoBOB) }}</p>
           </div>
           <i class="pi pi-money-bill text-2xl text-sky-600"></i>
         </div>
@@ -73,6 +83,29 @@
         <p class="text-sm text-gray-500">Tipo cambio promedio</p>
         <p class="text-2xl font-bold text-gray-900">{{ formatTipoCambio(tipoCambioPromedio) }}</p>
         <p class="text-xs text-gray-500">Ventas con TC: {{ ventasConTipoCambio.length }}</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <p class="text-sm text-gray-500">Creditos activos</p>
+        <p class="text-2xl font-bold text-gray-900">{{ creditosActivos.length }}</p>
+        <p class="text-xs text-gray-500">{{ creditosDirectos.length }} directos / {{ creditosBancarios.length }} bancarios</p>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <p class="text-sm text-gray-500">Saldo creditos</p>
+        <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(saldoCreditosUSD) }}</p>
+        <p class="text-xs text-gray-500">Bs {{ formatPrecio(saldoCreditosBOB) }}</p>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <p class="text-sm text-gray-500">Credito directo</p>
+        <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(financiadoCreditoDirectoUSD) }}</p>
+        <p class="text-xs text-gray-500">{{ creditosDirectosActivos.length }} activos</p>
+      </div>
+      <div class="rounded-lg border border-gray-200 bg-white p-4">
+        <p class="text-sm text-gray-500">Credito bancario</p>
+        <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(financiadoCreditoBancarioUSD) }}</p>
+        <p class="text-xs text-gray-500">{{ creditosBancariosEnTramite.length }} en tramite</p>
       </div>
     </div>
 
@@ -129,6 +162,10 @@
             <span class="text-sm text-gray-500">Vehiculos activos</span>
             <span class="font-semibold text-gray-900">{{ vehiculosActivos }}</span>
           </div>
+          <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <span class="text-sm text-gray-500">Creditos pagados</span>
+            <span class="font-semibold text-gray-900">{{ creditosPagados.length }}</span>
+          </div>
           <div class="flex items-center justify-between">
             <span class="text-sm text-gray-500">Reservas completadas</span>
             <span class="font-semibold text-gray-900">{{ reservasCompletadas.length }}</span>
@@ -140,7 +177,7 @@
     <section class="rounded-lg border border-gray-200 bg-white p-4">
       <div class="mb-4 flex items-center justify-between gap-3">
         <h3 class="text-lg font-semibold text-gray-900">Ventas Recientes</h3>
-        <span class="text-sm text-gray-500">Ultimos registros</span>
+        <span class="text-sm text-gray-500">Periodo {{ etiquetaPeriodo }}</span>
       </div>
 
       <DataTable
@@ -166,9 +203,14 @@
         </Column>
         <Column field="cliente" header="Cliente" />
         <Column field="vehiculo" header="Vehiculo" />
+        <Column field="tipo_venta" header="Tipo">
+          <template #body="slotProps">
+            {{ etiquetaTipoVenta(slotProps.data.tipo_venta) }}
+          </template>
+        </Column>
         <Column field="estado_venta" header="Estado">
           <template #body="slotProps">
-            <Tag :value="slotProps.data.estado_venta" :severity="slotProps.data.estado_venta === 'Completada' ? 'success' : 'warning'" />
+            <Tag :value="slotProps.data.estado_venta" :severity="severityEstadoVenta(slotProps.data.estado_venta)" />
           </template>
         </Column>
         <Column field="tipo_cambio_usado" header="TC">
@@ -210,18 +252,47 @@ const usuarios = ref<any[]>([]);
 const clientes = ref<any[]>([]);
 const vehiculos = ref<any[]>([]);
 const ventas = ref<any[]>([]);
+const periodoSeleccionado = ref(obtenerPeriodoActual());
 
-const ventasCompletadas = computed(() => ventas.value.filter(venta => venta.estado_venta === 'Completada' && venta.estado_pago === 'Pagado completo'));
+const ventasDelPeriodo = computed(() => ventas.value.filter(venta => ventaPerteneceAPeriodo(venta.fecha, periodoSeleccionado.value)));
+const ventasCompletadas = computed(() => ventas.value.filter(esVentaCompletada));
+const ventasCompletadasPeriodo = computed(() => ventasDelPeriodo.value.filter(esVentaCompletada));
+const etiquetaPeriodo = computed(() => {
+  const [year, month] = periodoSeleccionado.value.split('-').map(Number);
+  if (!year || !month) return 'actual';
+
+  return new Date(year, month - 1, 1).toLocaleDateString('es-BO', {
+    month: 'long',
+    year: 'numeric'
+  });
+});
 const reservas = computed(() => ventas.value.filter(venta => venta.tipo_venta === 'Reserva'));
 const reservasPendientes = computed(() => reservas.value.filter(venta => venta.estado_venta !== 'Completada' && venta.estado_venta !== 'Anulada'));
-const reservasCompletadas = computed(() => reservas.value.filter(venta => venta.estado_venta === 'Completada' && venta.estado_pago === 'Pagado completo'));
-const ventasMixtas = computed(() => ventas.value.filter(venta => venta.metodo_pago === 'Mixto'));
-const ventasConTipoCambio = computed(() => ventas.value.filter(venta => Number(venta.tipo_cambio_usado || 0) > 0));
-const totalVendidoUSD = computed(() => ventasCompletadas.value.reduce((total, venta) => total + Number(venta.precio_total || 0), 0));
-const totalVendidoBOB = computed(() => ventasCompletadas.value.reduce((total, venta) => total + Number(venta.monto_bob_calculado || 0), 0));
+const reservasCompletadas = computed(() => reservas.value.filter(venta =>
+  (venta.estado_venta === 'Completada' || venta.estado_venta === 'pagado_completo') &&
+  venta.estado_pago === 'Pagado completo'
+));
+const creditos = computed(() => ventas.value.filter(venta => ['credito_directo', 'credito_bancario'].includes(venta.tipo_venta)));
+const creditosActivos = computed(() => creditos.value.filter(venta => venta.estado_venta === 'en_credito'));
+const creditosPagados = computed(() => creditos.value.filter(venta => venta.estado_venta === 'pagado_completo' && venta.estado_pago === 'Pagado completo'));
+const creditosDirectos = computed(() => creditos.value.filter(venta => venta.tipo_venta === 'credito_directo'));
+const creditosBancarios = computed(() => creditos.value.filter(venta => venta.tipo_venta === 'credito_bancario'));
+const creditosDirectosActivos = computed(() => creditosDirectos.value.filter(venta => venta.estado_venta === 'en_credito'));
+const creditosBancariosEnTramite = computed(() => creditosBancarios.value.filter(venta =>
+  venta.estado_venta === 'en_credito' &&
+  !['Aprobado', 'Rechazado'].includes(venta.estado_tramite_bancario)
+));
+const ventasMixtas = computed(() => ventasDelPeriodo.value.filter(venta => venta.metodo_pago === 'Mixto'));
+const ventasConTipoCambio = computed(() => ventasDelPeriodo.value.filter(venta => Number(venta.tipo_cambio_usado || 0) > 0));
+const totalVendidoPeriodoUSD = computed(() => ventasCompletadasPeriodo.value.reduce((total, venta) => total + Number(venta.precio_total || 0), 0));
+const totalVendidoPeriodoBOB = computed(() => ventasCompletadasPeriodo.value.reduce((total, venta) => total + Number(venta.monto_bob_calculado || 0), 0));
 const totalReservadoUSD = computed(() => reservasPendientes.value.reduce((total, venta) => total + Number(venta.cuota_inicial || 0), 0));
 const saldoReservasUSD = computed(() => reservasPendientes.value.reduce((total, venta) => total + Number(venta.saldo || 0), 0));
 const saldoReservasBOB = computed(() => reservasPendientes.value.reduce((total, venta) => total + Number(venta.saldo_bob || 0), 0));
+const saldoCreditosUSD = computed(() => creditosActivos.value.reduce((total, venta) => total + Number(venta.saldo || 0), 0));
+const saldoCreditosBOB = computed(() => creditosActivos.value.reduce((total, venta) => total + Number(venta.saldo_bob || 0), 0));
+const financiadoCreditoDirectoUSD = computed(() => creditosDirectos.value.reduce((total, venta) => total + Number(venta.monto_financiado || venta.saldo || 0), 0));
+const financiadoCreditoBancarioUSD = computed(() => creditosBancarios.value.reduce((total, venta) => total + Number(venta.monto_financiar_banco || venta.monto_financiado || venta.saldo || 0), 0));
 const totalPagoMixtoUSD = computed(() => ventasMixtas.value.reduce((total, venta) => total + Number(venta.pago_usd || 0), 0));
 const totalPagoMixtoBOB = computed(() => ventasMixtas.value.reduce((total, venta) => total + Number(venta.pago_bob || 0), 0));
 const tipoCambioPromedio = computed(() => {
@@ -238,7 +309,7 @@ const vehiculosActivos = computed(() => vehiculos.value.filter(vehiculo => vehic
 const vendedores = computed(() => {
   const acumulado = new Map<string, { nombre: string; cantidad: number; total: number }>();
 
-  for (const venta of ventasCompletadas.value) {
+  for (const venta of ventasCompletadasPeriodo.value) {
     const nombre = venta.vendedor || 'Sin vendedor';
     const actual = acumulado.get(nombre) || { nombre, cantidad: 0, total: 0 };
     actual.cantidad += 1;
@@ -255,7 +326,7 @@ const vendedores = computed(() => {
     }));
 });
 
-const ventasRecientes = computed(() => ventas.value.slice(0, 8));
+const ventasRecientes = computed(() => ventasDelPeriodo.value.slice(0, 8));
 
 onMounted(async () => {
   await cargarDashboard();
@@ -304,5 +375,35 @@ function formatTipoCambio(value: number) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4
   });
+}
+
+function obtenerPeriodoActual() {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function ventaPerteneceAPeriodo(fecha: string, periodo: string) {
+  if (!fecha || !periodo) return false;
+  return fecha.slice(0, 7) === periodo;
+}
+
+function esVentaCompletada(venta: any) {
+  return (venta.estado_venta === 'Completada' || venta.estado_venta === 'pagado_completo') &&
+    venta.estado_pago === 'Pagado completo';
+}
+
+function etiquetaTipoVenta(tipo: string) {
+  if (tipo === 'credito_directo') return 'Credito directo';
+  if (tipo === 'credito_bancario') return 'Credito bancario';
+  return tipo || 'N/A';
+}
+
+function severityEstadoVenta(estado: string) {
+  if (estado === 'Completada' || estado === 'pagado_completo') return 'success';
+  if (estado === 'en_credito') return 'info';
+  if (estado === 'Anulada') return 'danger';
+  return 'warning';
 }
 </script>

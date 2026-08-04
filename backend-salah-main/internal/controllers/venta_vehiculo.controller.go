@@ -35,34 +35,43 @@ const (
 )
 
 type VentaVehiculoDAO struct {
-	IDCliente           uint           `json:"id_cliente"`
-	IDVehiculo          uint           `json:"id_vehiculo"`
-	IDUsuario           uint           `json:"id_usuario"`
-	Fecha               string         `json:"fecha"`
-	TipoVenta           string         `json:"tipo_venta"`
-	Cantidad            uint           `json:"cantidad"`
-	TipoCambio          float64        `json:"tipo_cambio"`
-	PagoUSD             float64        `json:"pago_usd"`
-	PagoBOB             float64        `json:"pago_bob"`
-	Pagos               []PagoVentaDAO `json:"pagos"`
-	ValidezProformaDias uint           `json:"validez_proforma_dias"`
-	EstadoVenta         string         `json:"estado_venta"`
-	EstadoPago          string         `json:"estado_pago"`
-	MetodoPago          string         `json:"metodo_pago"`
-	EstadoEntrega       string         `json:"estado_entrega"`
-	FechaEntrega        string         `json:"fecha_entrega"`
-	ReferenciaBancaria  string         `json:"referencia_bancaria"`
-	EstadoDesembolso    string         `json:"estado_desembolso"`
-	MontoReserva        float64        `json:"monto_reserva"`
-	MontoInicial        float64        `json:"monto_inicial"`
-	NumeroCuotas        uint           `json:"numero_cuotas"`
-	FechaInicioCredito  string         `json:"fecha_inicio_credito"`
-	FrecuenciaPago      string         `json:"frecuencia_pago"`
-	TieneRespaldo       bool           `json:"tiene_respaldo"`
-	TipoGarantia        string         `json:"tipo_garantia"`
-	DocumentoGarantia   string         `json:"documento_garantia"`
-	DatosGarante        string         `json:"datos_garante"`
-	Observacion         string         `json:"observacion"`
+	IDCliente                uint           `json:"id_cliente"`
+	IDVehiculo               uint           `json:"id_vehiculo"`
+	IDUsuario                uint           `json:"id_usuario"`
+	Fecha                    string         `json:"fecha"`
+	TipoVenta                string         `json:"tipo_venta"`
+	Cantidad                 uint           `json:"cantidad"`
+	TipoCambio               float64        `json:"tipo_cambio"`
+	PagoUSD                  float64        `json:"pago_usd"`
+	PagoBOB                  float64        `json:"pago_bob"`
+	Pagos                    []PagoVentaDAO `json:"pagos"`
+	PagosEnganche            []PagoVentaDAO `json:"pagos_enganche"`
+	ValidezProformaDias      uint           `json:"validez_proforma_dias"`
+	EstadoVenta              string         `json:"estado_venta"`
+	EstadoPago               string         `json:"estado_pago"`
+	MetodoPago               string         `json:"metodo_pago"`
+	EstadoEntrega            string         `json:"estado_entrega"`
+	FechaEntrega             string         `json:"fecha_entrega"`
+	ReferenciaBancaria       string         `json:"referencia_bancaria"`
+	EstadoDesembolso         string         `json:"estado_desembolso"`
+	BancoEntidadFinanciera   string         `json:"banco_entidad_financiera"`
+	EstadoTramiteBancario    string         `json:"estado_tramite_bancario"`
+	MontoFinanciarBanco      float64        `json:"monto_financiar_banco"`
+	FechaEstimadaDesembolso  string         `json:"fecha_estimada_desembolso"`
+	NumeroOperacionBanco     string         `json:"numero_operacion_banco"`
+	FechaDesembolsoBanco     string         `json:"fecha_desembolso_banco"`
+	MontoDesembolsadoBanco   float64        `json:"monto_desembolsado_banco"`
+	IDUsuarioDesembolsoBanco uint           `json:"id_usuario_desembolso_banco"`
+	MontoReserva             float64        `json:"monto_reserva"`
+	MontoInicial             float64        `json:"monto_inicial"`
+	NumeroCuotas             uint           `json:"numero_cuotas"`
+	FechaInicioCredito       string         `json:"fecha_inicio_credito"`
+	FrecuenciaPago           string         `json:"frecuencia_pago"`
+	TieneRespaldo            bool           `json:"tiene_respaldo"`
+	TipoGarantia             string         `json:"tipo_garantia"`
+	DocumentoGarantia        string         `json:"documento_garantia"`
+	DatosGarante             string         `json:"datos_garante"`
+	Observacion              string         `json:"observacion"`
 }
 
 type PagoVentaDAO struct {
@@ -81,12 +90,24 @@ type VentaVehiculoEstadoDAO struct {
 }
 
 type CompletarReservaDAO struct {
-	MetodoPago    string  `json:"metodo_pago"`
-	EstadoEntrega string  `json:"estado_entrega"`
-	FechaEntrega  string  `json:"fecha_entrega"`
-	MontoPago     float64 `json:"monto_pago"`
-	IDUsuarioPago uint    `json:"id_usuario_pago"`
-	Observacion   string  `json:"observacion"`
+	TipoPagoSaldo           string         `json:"tipo_pago_saldo"`
+	MetodoPago              string         `json:"metodo_pago"`
+	Pagos                   []PagoVentaDAO `json:"pagos"`
+	EstadoEntrega           string         `json:"estado_entrega"`
+	FechaEntrega            string         `json:"fecha_entrega"`
+	MontoPago               float64        `json:"monto_pago"`
+	IDUsuarioPago           uint           `json:"id_usuario_pago"`
+	Observacion             string         `json:"observacion"`
+	NumeroCuotas            uint           `json:"numero_cuotas"`
+	FechaInicioCredito      string         `json:"fecha_inicio_credito"`
+	FrecuenciaPago          string         `json:"frecuencia_pago"`
+	TieneRespaldo           bool           `json:"tiene_respaldo"`
+	TipoGarantia            string         `json:"tipo_garantia"`
+	DocumentoGarantia       string         `json:"documento_garantia"`
+	DatosGarante            string         `json:"datos_garante"`
+	BancoEntidadFinanciera  string         `json:"banco_entidad_financiera"`
+	EstadoTramiteBancario   string         `json:"estado_tramite_bancario"`
+	FechaEstimadaDesembolso string         `json:"fecha_estimada_desembolso"`
 }
 
 type VentaVehiculoHistorialDAO struct {
@@ -106,7 +127,9 @@ type VentaVehiculoHistorialDAO struct {
 	PagoUSD                  float64         `json:"pago_usd"`
 	PagoBOB                  float64         `json:"pago_bob"`
 	Pagos                    json.RawMessage `json:"pagos"`
+	PagosEnganche            json.RawMessage `json:"pagos_enganche"`
 	DetallePago              string          `json:"detalle_pago"`
+	DetalleEnganche          string          `json:"detalle_enganche"`
 	SaldoBOB                 float64         `json:"saldo_bob"`
 	CuotaInicial             float64         `json:"cuota_inicial"`
 	Saldo                    float64         `json:"saldo"`
@@ -119,6 +142,14 @@ type VentaVehiculoHistorialDAO struct {
 	FechaEntrega             string          `json:"fecha_entrega"`
 	ReferenciaBancaria       string          `json:"referencia_bancaria"`
 	EstadoDesembolso         string          `json:"estado_desembolso"`
+	BancoEntidadFinanciera   string          `json:"banco_entidad_financiera"`
+	EstadoTramiteBancario    string          `json:"estado_tramite_bancario"`
+	MontoFinanciarBanco      float64         `json:"monto_financiar_banco"`
+	FechaEstimadaDesembolso  string          `json:"fecha_estimada_desembolso"`
+	NumeroOperacionBanco     string          `json:"numero_operacion_banco"`
+	FechaDesembolsoBanco     string          `json:"fecha_desembolso_banco"`
+	MontoDesembolsadoBanco   float64         `json:"monto_desembolsado_banco"`
+	UsuarioDesembolsoBanco   string          `json:"usuario_desembolso_banco"`
 	MontoFinanciado          float64         `json:"monto_financiado"`
 	NumeroCuotas             uint            `json:"numero_cuotas"`
 	MontoCuota               float64         `json:"monto_cuota"`
@@ -140,19 +171,23 @@ type VentaVehiculoHistorialDAO struct {
 }
 
 type CuotaCreditoDAO struct {
-	ID               uint    `json:"id"`
-	IDVentaVehiculo  uint    `json:"id_venta_vehiculo"`
-	Numero           uint    `json:"numero"`
-	FechaVencimiento string  `json:"fecha_vencimiento"`
-	Monto            float64 `json:"monto"`
-	TipoCambioPago   float64 `json:"tipo_cambio_pago"`
-	MontoBOBPagado   float64 `json:"monto_bob_pagado"`
-	Estado           string  `json:"estado"`
-	FechaPago        string  `json:"fecha_pago"`
-	UsuarioPago      string  `json:"usuario_pago"`
+	ID               uint            `json:"id"`
+	IDVentaVehiculo  uint            `json:"id_venta_vehiculo"`
+	Numero           uint            `json:"numero"`
+	FechaVencimiento string          `json:"fecha_vencimiento"`
+	Monto            float64         `json:"monto"`
+	MontoPagado      float64         `json:"monto_pagado"`
+	SaldoPendiente   float64         `json:"saldo_pendiente"`
+	TipoCambioPago   float64         `json:"tipo_cambio_pago"`
+	MontoBOBPagado   float64         `json:"monto_bob_pagado"`
+	Estado           string          `json:"estado"`
+	FechaPago        string          `json:"fecha_pago"`
+	UsuarioPago      string          `json:"usuario_pago"`
+	HistorialPagos   json.RawMessage `json:"historial_pagos"`
 }
 
-type PagoCuotaCreditoDAO struct {
+type PagoCuotaCreditoRequest struct {
+	MontoPago      float64 `json:"monto_pago"`
 	TipoCambioPago float64 `json:"tipo_cambio_pago"`
 	IDUsuarioPago  uint    `json:"id_usuario_pago"`
 }
@@ -185,6 +220,15 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		venta.Pagos = pagosNormalizados
+	}
+	if len(venta.PagosEnganche) > 0 {
+		pagosNormalizados, _, _, _, err := normalizarPagosVenta(venta.PagosEnganche, venta.TipoCambio)
+		if err != nil {
+			eliminarArchivoVenta(documentoGuardado)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		venta.PagosEnganche = pagosNormalizados
 	}
 
 	tx := db.GDB.Begin()
@@ -227,7 +271,30 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if esVentaCredito(nuevaVenta.TipoVenta) {
+	if nuevaVenta.TipoVenta == tipoVentaCreditoBancario && len(venta.PagosEnganche) > 0 {
+		pagosEnganche := make([]models.PagoEngancheBancario, 0, len(venta.PagosEnganche))
+		for _, pago := range venta.PagosEnganche {
+			equivalenteUSD := roundMoney(pago.Monto)
+			if pago.Moneda == "BOB" {
+				equivalenteUSD = roundMoney(pago.Monto / nuevaVenta.TipoCambioUsado)
+			}
+			pagosEnganche = append(pagosEnganche, models.PagoEngancheBancario{
+				IDVentaVehiculo: nuevaVenta.ID,
+				Moneda:          pago.Moneda,
+				Metodo:          pago.Metodo,
+				Monto:           roundMoney(pago.Monto),
+				TipoCambio:      nuevaVenta.TipoCambioUsado,
+				EquivalenteUSD:  equivalenteUSD,
+			})
+		}
+		if err := tx.Create(&pagosEnganche).Error; err != nil {
+			tx.Rollback()
+			eliminarArchivoVenta(documentoGuardado)
+			http.Error(w, "Error al registrar pagos del enganche", http.StatusInternalServerError)
+			return
+		}
+	}
+	if esVentaCreditoConCuotas(nuevaVenta.TipoVenta) {
 		cuotas := generarCuotasCredito(nuevaVenta)
 		if err := tx.Create(&cuotas).Error; err != nil {
 			tx.Rollback()
@@ -270,6 +337,72 @@ func leerVentaVehiculoRequest(r *http.Request) (VentaVehiculoDAO, string, error)
 	return venta, documentoGarantia, nil
 }
 
+func leerCompletarReservaRequest(r *http.Request) (CompletarReservaDAO, string, error) {
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if !strings.Contains(contentType, "multipart/form-data") {
+		var payload CompletarReservaDAO
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			return CompletarReservaDAO{}, "", err
+		}
+		return payload, "", nil
+	}
+
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		return CompletarReservaDAO{}, "", errors.New("Error al parsear el formulario")
+	}
+
+	documentoGarantia, err := guardarDocumentoGarantiaVenta(r)
+	if err != nil {
+		return CompletarReservaDAO{}, "", err
+	}
+	payload, err := completarReservaDAOFromForm(r)
+	if err != nil {
+		eliminarArchivoVenta(documentoGarantia)
+		return CompletarReservaDAO{}, "", err
+	}
+	payload.DocumentoGarantia = documentoGarantia
+	return payload, documentoGarantia, nil
+}
+
+func completarReservaDAOFromForm(r *http.Request) (CompletarReservaDAO, error) {
+	montoPago, err := parseFloatFormValueWithZero(r.FormValue("monto_pago"))
+	if err != nil {
+		return CompletarReservaDAO{}, errors.New("Monto de pago no valido")
+	}
+	idUsuarioPago, err := parseUintFormValueWithZero(r.FormValue("id_usuario_pago"))
+	if err != nil {
+		return CompletarReservaDAO{}, errors.New("Usuario que acepta el pago no valido")
+	}
+	numeroCuotas, err := parseUintFormValueWithZero(r.FormValue("numero_cuotas"))
+	if err != nil {
+		return CompletarReservaDAO{}, errors.New("Numero de cuotas no valido")
+	}
+	pagos, err := parsePagosVentaFormValue(r.FormValue("pagos"))
+	if err != nil {
+		return CompletarReservaDAO{}, err
+	}
+
+	return CompletarReservaDAO{
+		TipoPagoSaldo:           r.FormValue("tipo_pago_saldo"),
+		MetodoPago:              r.FormValue("metodo_pago"),
+		Pagos:                   pagos,
+		EstadoEntrega:           r.FormValue("estado_entrega"),
+		FechaEntrega:            r.FormValue("fecha_entrega"),
+		MontoPago:               montoPago,
+		IDUsuarioPago:           idUsuarioPago,
+		Observacion:             r.FormValue("observacion"),
+		NumeroCuotas:            numeroCuotas,
+		FechaInicioCredito:      r.FormValue("fecha_inicio_credito"),
+		FrecuenciaPago:          r.FormValue("frecuencia_pago"),
+		TieneRespaldo:           parseBoolFormValue(r.FormValue("tiene_respaldo")),
+		TipoGarantia:            r.FormValue("tipo_garantia"),
+		DatosGarante:            r.FormValue("datos_garante"),
+		BancoEntidadFinanciera:  strings.TrimSpace(r.FormValue("banco_entidad_financiera")),
+		EstadoTramiteBancario:   r.FormValue("estado_tramite_bancario"),
+		FechaEstimadaDesembolso: r.FormValue("fecha_estimada_desembolso"),
+	}, nil
+}
+
 func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	idCliente, err := parseUintFormValue(r.FormValue("id_cliente"))
 	if err != nil {
@@ -303,6 +436,10 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	if err != nil {
 		return VentaVehiculoDAO{}, err
 	}
+	pagosEnganche, err := parsePagosVentaFormValue(r.FormValue("pagos_enganche"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Detalle de pago del enganche no valido")
+	}
 	validez, err := parseUintFormValueWithZero(r.FormValue("validez_proforma_dias"))
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Validez de proforma no valida")
@@ -319,35 +456,56 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Numero de cuotas no valido")
 	}
+	montoFinanciarBanco, err := parseFloatFormValueWithZero(r.FormValue("monto_financiar_banco"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Monto a financiar por el banco no valido")
+	}
+	montoDesembolsadoBanco, err := parseFloatFormValueWithZero(r.FormValue("monto_desembolsado_banco"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Monto desembolsado por el banco no valido")
+	}
+	idUsuarioDesembolsoBanco, err := parseUintFormValueWithZero(r.FormValue("id_usuario_desembolso_banco"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Usuario de desembolso no valido")
+	}
 
 	return VentaVehiculoDAO{
-		IDCliente:           idCliente,
-		IDVehiculo:          idVehiculo,
-		IDUsuario:           idUsuario,
-		Fecha:               r.FormValue("fecha"),
-		TipoVenta:           r.FormValue("tipo_venta"),
-		Cantidad:            cantidad,
-		TipoCambio:          tipoCambio,
-		PagoUSD:             pagoUSD,
-		PagoBOB:             pagoBOB,
-		Pagos:               pagos,
-		ValidezProformaDias: validez,
-		EstadoVenta:         r.FormValue("estado_venta"),
-		EstadoPago:          r.FormValue("estado_pago"),
-		MetodoPago:          r.FormValue("metodo_pago"),
-		EstadoEntrega:       r.FormValue("estado_entrega"),
-		FechaEntrega:        r.FormValue("fecha_entrega"),
-		ReferenciaBancaria:  r.FormValue("referencia_bancaria"),
-		EstadoDesembolso:    r.FormValue("estado_desembolso"),
-		MontoReserva:        montoReserva,
-		MontoInicial:        montoInicial,
-		NumeroCuotas:        numeroCuotas,
-		FechaInicioCredito:  r.FormValue("fecha_inicio_credito"),
-		FrecuenciaPago:      r.FormValue("frecuencia_pago"),
-		TieneRespaldo:       parseBoolFormValue(r.FormValue("tiene_respaldo")),
-		TipoGarantia:        r.FormValue("tipo_garantia"),
-		DatosGarante:        r.FormValue("datos_garante"),
-		Observacion:         r.FormValue("observacion"),
+		IDCliente:                idCliente,
+		IDVehiculo:               idVehiculo,
+		IDUsuario:                idUsuario,
+		Fecha:                    r.FormValue("fecha"),
+		TipoVenta:                r.FormValue("tipo_venta"),
+		Cantidad:                 cantidad,
+		TipoCambio:               tipoCambio,
+		PagoUSD:                  pagoUSD,
+		PagoBOB:                  pagoBOB,
+		Pagos:                    pagos,
+		PagosEnganche:            pagosEnganche,
+		ValidezProformaDias:      validez,
+		EstadoVenta:              r.FormValue("estado_venta"),
+		EstadoPago:               r.FormValue("estado_pago"),
+		MetodoPago:               r.FormValue("metodo_pago"),
+		EstadoEntrega:            r.FormValue("estado_entrega"),
+		FechaEntrega:             r.FormValue("fecha_entrega"),
+		ReferenciaBancaria:       r.FormValue("referencia_bancaria"),
+		EstadoDesembolso:         r.FormValue("estado_desembolso"),
+		BancoEntidadFinanciera:   strings.TrimSpace(r.FormValue("banco_entidad_financiera")),
+		EstadoTramiteBancario:    r.FormValue("estado_tramite_bancario"),
+		MontoFinanciarBanco:      montoFinanciarBanco,
+		FechaEstimadaDesembolso:  r.FormValue("fecha_estimada_desembolso"),
+		NumeroOperacionBanco:     strings.TrimSpace(r.FormValue("numero_operacion_banco")),
+		FechaDesembolsoBanco:     r.FormValue("fecha_desembolso_banco"),
+		MontoDesembolsadoBanco:   montoDesembolsadoBanco,
+		IDUsuarioDesembolsoBanco: idUsuarioDesembolsoBanco,
+		MontoReserva:             montoReserva,
+		MontoInicial:             montoInicial,
+		NumeroCuotas:             numeroCuotas,
+		FechaInicioCredito:       r.FormValue("fecha_inicio_credito"),
+		FrecuenciaPago:           r.FormValue("frecuencia_pago"),
+		TieneRespaldo:            parseBoolFormValue(r.FormValue("tiene_respaldo")),
+		TipoGarantia:             r.FormValue("tipo_garantia"),
+		DatosGarante:             r.FormValue("datos_garante"),
+		Observacion:              r.FormValue("observacion"),
 	}, nil
 }
 
@@ -467,11 +625,30 @@ func ObtenerCuotasCreditoVenta(w http.ResponseWriter, r *http.Request) {
 	query := `
 		select cc.id, cc.id_venta_vehiculo, cc.numero, to_char(cc.fecha_vencimiento, 'YYYY-MM-DD') as fecha_vencimiento,
 			cc.monto,
+			coalesce(cc.monto_pagado, 0) as monto_pagado,
+			coalesce(nullif(cc.saldo_pendiente, 0), case when cc.estado = 'pagada' then 0 else cc.monto - coalesce(cc.monto_pagado, 0) end) as saldo_pendiente,
 			coalesce(cc.tipo_cambio_pago, 0) as tipo_cambio_pago,
 			coalesce(cc.monto_bob_pagado, 0) as monto_bob_pagado,
 			case when cc.estado = 'pendiente' and cc.fecha_vencimiento < current_date then 'atrasada' else cc.estado end as estado,
 			coalesce(to_char(cc.fecha_pago, 'YYYY-MM-DD'), '') as fecha_pago,
-			coalesce(concat_ws(' ', up.nombre, up.apellido), '') as usuario_pago
+			coalesce(concat_ws(' ', up.nombre, up.apellido), '') as usuario_pago,
+			coalesce((
+				select json_agg(
+					json_build_object(
+						'id', pcc.id,
+						'monto_usd', pcc.monto_usd,
+						'tipo_cambio', pcc.tipo_cambio,
+						'monto_bob', pcc.monto_bob,
+						'fecha_pago', to_char(pcc.fecha_pago, 'YYYY-MM-DD'),
+						'usuario_pago', coalesce(concat_ws(' ', uh.nombre, uh.apellido), ''),
+						'observacion', pcc.observacion
+					)
+					order by pcc.fecha_pago asc, pcc.id asc
+				)
+				from pagos_cuotas_credito pcc
+				left join usuarios uh on uh.id = pcc.id_usuario_pago
+				where pcc.id_cuota_credito = cc.id
+			), '[]'::json) as historial_pagos
 		from cuotas_credito cc
 		left join usuarios up on up.id = cc.id_usuario_pago
 		where cc.id_venta_vehiculo = ?
@@ -488,9 +665,9 @@ func ObtenerCuotasCreditoVenta(w http.ResponseWriter, r *http.Request) {
 
 func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	var payload PagoCuotaCreditoDAO
+	var payload PagoCuotaCreditoRequest
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Tipo de cambio requerido", http.StatusBadRequest)
+		http.Error(w, "Datos de pago no validos", http.StatusBadRequest)
 		return
 	}
 	principal, ok := security.PrincipalFromContext(r.Context())
@@ -508,6 +685,11 @@ func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Usuario que acepta el pago requerido", http.StatusBadRequest)
 		return
 	}
+	montoPago := roundMoney(payload.MontoPago)
+	if montoPago <= 0 {
+		http.Error(w, "Monto a pagar requerido", http.StatusBadRequest)
+		return
+	}
 
 	tx := db.GDB.Begin()
 	var cuota models.CuotaCredito
@@ -522,17 +704,70 @@ func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
-	cuota.Estado = "pagada"
-	cuota.FechaPago = &now
-	cuota.TipoCambioPago = tipoCambioPago
-	cuota.MontoBOBPagado = roundMoney(cuota.Monto * tipoCambioPago)
-	cuota.IDUsuarioPago = &payload.IDUsuarioPago
-	if err := tx.Save(&cuota).Error; err != nil {
+	var cuotas []models.CuotaCredito
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id_venta_vehiculo = ? and numero >= ? and estado <> ?", cuota.IDVentaVehiculo, cuota.Numero, "pagada").
+		Order("fecha_vencimiento asc, numero asc, id asc").
+		Find(&cuotas).Error; err != nil {
 		tx.Rollback()
-		http.Error(w, "Error al pagar cuota", http.StatusInternalServerError)
+		http.Error(w, "Error al consultar cuotas pendientes", http.StatusInternalServerError)
 		return
 	}
+	saldoAplicable := 0.0
+	for i := range cuotas {
+		normalizarSaldoCuota(&cuotas[i])
+		saldoAplicable = roundMoney(saldoAplicable + cuotas[i].SaldoPendiente)
+	}
+	if montoPago > saldoAplicable {
+		tx.Rollback()
+		http.Error(w, "Monto a pagar mayor al saldo pendiente del credito", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now()
+	restante := montoPago
+	for i := range cuotas {
+		if restante <= 0 {
+			break
+		}
+		aplicado := roundMoney(math.Min(restante, cuotas[i].SaldoPendiente))
+		if aplicado <= 0 {
+			continue
+		}
+		restante = roundMoney(restante - aplicado)
+		cuotas[i].MontoPagado = roundMoney(cuotas[i].MontoPagado + aplicado)
+		cuotas[i].SaldoPendiente = roundMoney(math.Max(cuotas[i].Monto-cuotas[i].MontoPagado, 0))
+		cuotas[i].TipoCambioPago = tipoCambioPago
+		cuotas[i].MontoBOBPagado = roundMoney(cuotas[i].MontoBOBPagado + aplicado*tipoCambioPago)
+		cuotas[i].IDUsuarioPago = &payload.IDUsuarioPago
+		if cuotas[i].SaldoPendiente == 0 {
+			cuotas[i].Estado = "pagada"
+			cuotas[i].FechaPago = &now
+		} else {
+			cuotas[i].Estado = "abonada"
+			cuotas[i].FechaPago = nil
+		}
+		pago := models.PagoCuotaCredito{
+			IDCuotaCredito:  cuotas[i].ID,
+			IDVentaVehiculo: cuotas[i].IDVentaVehiculo,
+			MontoUSD:        aplicado,
+			TipoCambio:      tipoCambioPago,
+			MontoBOB:        roundMoney(aplicado * tipoCambioPago),
+			FechaPago:       now,
+			IDUsuarioPago:   payload.IDUsuarioPago,
+		}
+		if err := tx.Create(&pago).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al registrar historial de pago", http.StatusInternalServerError)
+			return
+		}
+		if err := tx.Save(&cuotas[i]).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al actualizar cuota", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	if err := actualizarEstadoVentaPorCuotas(tx, cuota.IDVentaVehiculo); err != nil {
 		tx.Rollback()
 		http.Error(w, "Error al actualizar estado de venta", http.StatusInternalServerError)
@@ -541,7 +776,10 @@ func PagarCuotaCredito(w http.ResponseWriter, r *http.Request) {
 	tx.Commit()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(&cuota)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"monto_aplicado": montoPago,
+		"id_venta":       cuota.IDVentaVehiculo,
+	})
 }
 
 func ObtenerVentasVehiculos(w http.ResponseWriter, r *http.Request) {
@@ -555,7 +793,7 @@ func ObtenerVentasVehiculos(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
 		return
 	}
-	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas", "contador") {
 		idUsuario = strconv.FormatUint(uint64(principal.ID), 10)
 	}
 	if idUsuario != "" {
@@ -710,11 +948,18 @@ func AnularVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 
 func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	var payload CompletarReservaDAO
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+	payload, documentoGuardado, err := leerCompletarReservaRequest(r)
+	if err != nil {
+		eliminarArchivoVenta(documentoGuardado)
 		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
+	reservaGuardada := false
+	defer func() {
+		if !reservaGuardada {
+			eliminarArchivoVenta(documentoGuardado)
+		}
+	}()
 	principal, ok := security.PrincipalFromContext(r.Context())
 	if !ok {
 		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
@@ -745,40 +990,168 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	montoPago := roundMoney(payload.MontoPago)
 	saldoPendiente := roundMoney(venta.Saldo)
-	if montoPago <= 0 {
-		tx.Rollback()
-		http.Error(w, "Monto de pago requerido", http.StatusBadRequest)
-		return
-	}
 	if payload.IDUsuarioPago == 0 {
 		tx.Rollback()
 		http.Error(w, "Usuario que acepta el pago requerido", http.StatusBadRequest)
 		return
 	}
-	if montoPago != saldoPendiente {
+	tipoPagoSaldo := strings.ToLower(strings.TrimSpace(payload.TipoPagoSaldo))
+	if tipoPagoSaldo == "" {
+		tipoPagoSaldo = "contado"
+	}
+	if saldoPendiente <= 0 {
 		tx.Rollback()
-		http.Error(w, "El monto de pago debe completar el saldo pendiente", http.StatusBadRequest)
+		http.Error(w, "La reserva no tiene saldo pendiente", http.StatusBadRequest)
 		return
 	}
-	metodoPago, err := normalizarMetodoPago(payload.MetodoPago)
-	if err != nil {
-		tx.Rollback()
-		http.Error(w, "Metodo de pago no valido", http.StatusBadRequest)
-		return
-	}
-
 	if err := descontarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
 		tx.Rollback()
 		http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 		return
 	}
 
-	venta.Saldo = 0
-	venta.EstadoVenta = estadoVentaCompletada
-	venta.EstadoPago = "Pagado completo"
-	venta.MetodoPago = metodoPago
+	switch tipoPagoSaldo {
+	case "contado":
+		montoPago := roundMoney(payload.MontoPago)
+		metodoPago, err := normalizarMetodoPago(payload.MetodoPago)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Metodo de pago no valido", http.StatusBadRequest)
+			return
+		}
+
+		pagosNormalizados := []PagoVentaDAO{{
+			Moneda: "USD",
+			Metodo: metodoPago,
+			Monto:  montoPago,
+		}}
+		totalUSD := montoPago
+		totalBOB := 0.0
+		pagadoEquivalenteUSD := montoPago
+		if metodoPago == "Mixto" || len(payload.Pagos) > 0 {
+			pagosNormalizados, totalUSD, totalBOB, pagadoEquivalenteUSD, err = normalizarPagosVenta(payload.Pagos, venta.TipoCambioUsado)
+			if err != nil {
+				tx.Rollback()
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			metodoPago = resumenMetodoPago(pagosNormalizados)
+		}
+		if roundMoney(pagadoEquivalenteUSD) != saldoPendiente {
+			tx.Rollback()
+			http.Error(w, "El monto de pago debe completar el saldo pendiente", http.StatusBadRequest)
+			return
+		}
+
+		pagos := make([]models.PagoVenta, 0, len(pagosNormalizados))
+		for _, pago := range pagosNormalizados {
+			pagos = append(pagos, models.PagoVenta{
+				VentaID: venta.ID,
+				Moneda:  pago.Moneda,
+				Metodo:  pago.Metodo,
+				Monto:   roundMoney(pago.Monto),
+			})
+		}
+		if err := tx.Create(&pagos).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al registrar pago de la reserva", http.StatusInternalServerError)
+			return
+		}
+
+		venta.PagoUSD = roundMoney(venta.PagoUSD + totalUSD)
+		venta.PagoBOB = roundMoney(venta.PagoBOB + totalBOB)
+		venta.Saldo = 0
+		venta.SaldoBOB = 0
+		venta.EstadoVenta = estadoVentaCompletada
+		venta.EstadoPago = "Pagado completo"
+		venta.MetodoPago = metodoPago
+	case "credito_directo":
+		if payload.NumeroCuotas == 0 {
+			tx.Rollback()
+			http.Error(w, "Numero de cuotas requerido", http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(payload.FechaInicioCredito) == "" {
+			tx.Rollback()
+			http.Error(w, "Fecha de inicio de credito requerida", http.StatusBadRequest)
+			return
+		}
+		fechaInicio, err := time.Parse("2006-01-02", payload.FechaInicioCredito)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, "Fecha de inicio de credito no valida", http.StatusBadRequest)
+			return
+		}
+		frecuencia, err := normalizarFrecuenciaPago(payload.FrecuenciaPago)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if !payload.TieneRespaldo || strings.TrimSpace(payload.TipoGarantia) == "" || strings.TrimSpace(payload.DatosGarante) == "" {
+			tx.Rollback()
+			http.Error(w, "Credito directo requiere respaldo, tipo de garantia y datos del garante", http.StatusBadRequest)
+			return
+		}
+
+		venta.TipoVenta = tipoVentaCreditoDirecto
+		venta.EstadoVenta = estadoVentaEnCredito
+		venta.EstadoPago = "Pendiente"
+		venta.MontoFinanciado = saldoPendiente
+		venta.NumeroCuotas = payload.NumeroCuotas
+		venta.MontoCuota = roundMoney(saldoPendiente / float64(payload.NumeroCuotas))
+		venta.FechaInicioCredito = &fechaInicio
+		venta.FrecuenciaPago = frecuencia
+		venta.TieneRespaldo = payload.TieneRespaldo
+		venta.TipoGarantia = strings.TrimSpace(payload.TipoGarantia)
+		venta.DocumentoGarantia = strings.TrimSpace(payload.DocumentoGarantia)
+		venta.DatosGarante = strings.TrimSpace(payload.DatosGarante)
+		venta.Saldo = saldoPendiente
+		venta.SaldoBOB = roundMoney(saldoPendiente * venta.TipoCambioUsado)
+	case "credito_bancario":
+		if strings.TrimSpace(payload.BancoEntidadFinanciera) == "" {
+			tx.Rollback()
+			http.Error(w, "Banco o entidad financiera requerido", http.StatusBadRequest)
+			return
+		}
+		estadoTramite, err := normalizarEstadoTramiteBancario(payload.EstadoTramiteBancario)
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		var fechaEstimada *time.Time
+		if strings.TrimSpace(payload.FechaEstimadaDesembolso) != "" {
+			parsed, err := time.Parse("2006-01-02", payload.FechaEstimadaDesembolso)
+			if err != nil {
+				tx.Rollback()
+				http.Error(w, "Fecha estimada de desembolso no valida", http.StatusBadRequest)
+				return
+			}
+			fechaEstimada = &parsed
+		}
+
+		venta.TipoVenta = tipoVentaCreditoBancario
+		venta.EstadoVenta = estadoVentaEnCredito
+		venta.EstadoPago = "Pendiente"
+		venta.MontoFinanciado = saldoPendiente
+		venta.MontoFinanciarBanco = saldoPendiente
+		venta.EstadoDesembolso = "Pendiente"
+		venta.BancoEntidadFinanciera = strings.TrimSpace(payload.BancoEntidadFinanciera)
+		venta.EstadoTramiteBancario = estadoTramite
+		venta.FechaEstimadaDesembolso = fechaEstimada
+		venta.MontoDesembolsadoBanco = 0
+		venta.FechaDesembolsoBanco = nil
+		venta.IDUsuarioDesembolsoBanco = nil
+		venta.Saldo = saldoPendiente
+		venta.SaldoBOB = roundMoney(saldoPendiente * venta.TipoCambioUsado)
+	default:
+		tx.Rollback()
+		http.Error(w, "Tipo de pago del saldo no valido", http.StatusBadRequest)
+		return
+	}
+
 	venta.EstadoEntrega = strings.TrimSpace(payload.EstadoEntrega)
 	if venta.EstadoEntrega == "" {
 		venta.EstadoEntrega = "Pendiente"
@@ -807,7 +1180,16 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al completar reserva", http.StatusInternalServerError)
 		return
 	}
+	if venta.TipoVenta == tipoVentaCreditoDirecto {
+		cuotas := generarCuotasCredito(venta)
+		if err := tx.Create(&cuotas).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al generar cuotas de credito", http.StatusInternalServerError)
+			return
+		}
+	}
 	tx.Commit()
+	reservaGuardada = true
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&venta)
@@ -861,7 +1243,88 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 	pagoBOB := roundMoney(payload.PagoBOB)
 	cuotaInicial := 0.0
 	saldo := 0.0
-	if esVentaCredito(tipoVenta) {
+	montoFinanciarBanco := 0.0
+	montoDesembolsadoBanco := roundMoney(payload.MontoDesembolsadoBanco)
+	var fechaEstimadaDesembolso *time.Time
+	var fechaDesembolsoBanco *time.Time
+	var idUsuarioDesembolsoBanco *uint
+	estadoDesembolso := strings.TrimSpace(payload.EstadoDesembolso)
+	if estadoDesembolso == "" {
+		estadoDesembolso = "Pendiente"
+	}
+	estadoTramiteBancario := strings.TrimSpace(payload.EstadoTramiteBancario)
+	if tipoVenta == tipoVentaCreditoBancario {
+		estadoTramiteBancario, err = normalizarEstadoTramiteBancario(estadoTramiteBancario)
+		if err != nil {
+			return models.VentaVehiculo{}, err
+		}
+		estadoDesembolso, err = normalizarEstadoDesembolsoBanco(estadoDesembolso)
+		if err != nil {
+			return models.VentaVehiculo{}, err
+		}
+		if strings.TrimSpace(payload.BancoEntidadFinanciera) == "" {
+			return models.VentaVehiculo{}, errors.New("Banco o entidad financiera requerido")
+		}
+		if len(payload.PagosEnganche) == 0 {
+			return models.VentaVehiculo{}, errors.New("Detalle de pago del enganche requerido")
+		}
+		pagosEnganche, totalEngancheUSD, totalEngancheBOB, engancheEquivalenteUSD, err := normalizarPagosVenta(payload.PagosEnganche, tipoCambio)
+		if err != nil {
+			return models.VentaVehiculo{}, err
+		}
+		payload.PagosEnganche = pagosEnganche
+		pagoUSD = totalEngancheUSD
+		pagoBOB = totalEngancheBOB
+		payload.MetodoPago = resumenMetodoPago(pagosEnganche)
+		cuotaInicial = roundMoney(engancheEquivalenteUSD)
+		if cuotaInicial <= 0 {
+			return models.VentaVehiculo{}, errors.New("Monto inicial requerido")
+		}
+		if cuotaInicial >= precioTotal {
+			return models.VentaVehiculo{}, errors.New("Monto inicial debe ser menor al precio total")
+		}
+		montoFinanciarBanco = roundMoney(precioTotal - cuotaInicial)
+		saldo = montoFinanciarBanco
+		if strings.TrimSpace(payload.FechaEstimadaDesembolso) != "" {
+			parsed, err := time.Parse("2006-01-02", payload.FechaEstimadaDesembolso)
+			if err != nil {
+				return models.VentaVehiculo{}, errors.New("Fecha estimada de desembolso no valida")
+			}
+			fechaEstimadaDesembolso = &parsed
+		}
+		if strings.TrimSpace(payload.FechaDesembolsoBanco) != "" {
+			parsed, err := time.Parse("2006-01-02", payload.FechaDesembolsoBanco)
+			if err != nil {
+				return models.VentaVehiculo{}, errors.New("Fecha de desembolso no valida")
+			}
+			fechaDesembolsoBanco = &parsed
+		}
+		if payload.IDUsuarioDesembolsoBanco != 0 {
+			idUsuarioDesembolsoBanco = &payload.IDUsuarioDesembolsoBanco
+		}
+		if estadoTramiteBancario == "Aprobado" && estadoDesembolso == "Registrado" {
+			if montoDesembolsadoBanco <= 0 {
+				return models.VentaVehiculo{}, errors.New("Monto desembolsado por el banco requerido")
+			}
+			if fechaDesembolsoBanco == nil {
+				return models.VentaVehiculo{}, errors.New("Fecha de desembolso requerida")
+			}
+			saldo = roundMoney(math.Max(montoFinanciarBanco-montoDesembolsadoBanco, 0))
+			if saldo == 0 {
+				estadoVenta = estadoVentaPagado
+				payload.EstadoPago = "Pagado completo"
+			} else {
+				estadoVenta = estadoVentaEnCredito
+				payload.EstadoPago = "Parcial"
+			}
+		} else {
+			montoDesembolsadoBanco = 0
+			fechaDesembolsoBanco = nil
+			idUsuarioDesembolsoBanco = nil
+			estadoVenta = estadoVentaEnCredito
+			payload.EstadoPago = "Pendiente"
+		}
+	} else if esVentaCreditoConCuotas(tipoVenta) {
 		cuotaInicial = roundMoney(payload.MontoInicial)
 		if cuotaInicial <= 0 {
 			cuotaInicial = roundMoney(precioTotal * 0.30)
@@ -973,6 +1436,11 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		}
 	}
 	fechaInicioCredito, frecuenciaPago, numeroCuotas, montoFinanciado, montoCuota := planCreditoValores(payload, tipoVenta, saldo)
+	if tipoVenta == tipoVentaCreditoBancario {
+		montoFinanciado = montoFinanciarBanco
+	} else {
+		estadoDesembolso = ""
+	}
 	estadoEntrega := strings.TrimSpace(payload.EstadoEntrega)
 	if estadoEntrega == "" {
 		estadoEntrega = "Pendiente"
@@ -1013,7 +1481,15 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		EstadoEntrega:            estadoEntrega,
 		FechaEntrega:             fechaEntrega,
 		ReferenciaBancaria:       strings.TrimSpace(payload.ReferenciaBancaria),
-		EstadoDesembolso:         strings.TrimSpace(payload.EstadoDesembolso),
+		EstadoDesembolso:         estadoDesembolso,
+		BancoEntidadFinanciera:   strings.TrimSpace(payload.BancoEntidadFinanciera),
+		EstadoTramiteBancario:    estadoTramiteBancario,
+		MontoFinanciarBanco:      montoFinanciarBanco,
+		FechaEstimadaDesembolso:  fechaEstimadaDesembolso,
+		NumeroOperacionBanco:     strings.TrimSpace(payload.NumeroOperacionBanco),
+		FechaDesembolsoBanco:     fechaDesembolsoBanco,
+		MontoDesembolsadoBanco:   montoDesembolsadoBanco,
+		IDUsuarioDesembolsoBanco: idUsuarioDesembolsoBanco,
 		Observacion:              strings.TrimSpace(payload.Observacion),
 	}, nil
 }
@@ -1022,12 +1498,16 @@ func esVentaCredito(tipoVenta string) bool {
 	return tipoVenta == tipoVentaCredito || tipoVenta == tipoVentaCreditoDirecto || tipoVenta == tipoVentaCreditoBancario
 }
 
+func esVentaCreditoConCuotas(tipoVenta string) bool {
+	return tipoVenta == tipoVentaCredito || tipoVenta == tipoVentaCreditoDirecto
+}
+
 func ventaDescuentaStock(estadoVenta string) bool {
 	return estadoVenta == estadoVentaCompletada || estadoVenta == estadoVentaEnCredito || estadoVenta == estadoVentaPagado
 }
 
 func planCreditoValores(payload VentaVehiculoDAO, tipoVenta string, saldo float64) (*time.Time, string, uint, float64, float64) {
-	if !esVentaCredito(tipoVenta) {
+	if !esVentaCreditoConCuotas(tipoVenta) {
 		return nil, "", 0, 0, 0
 	}
 
@@ -1057,10 +1537,22 @@ func generarCuotasCredito(venta models.VentaVehiculo) []models.CuotaCredito {
 			Numero:           i,
 			FechaVencimiento: calcularVencimientoCuota(*venta.FechaInicioCredito, venta.FrecuenciaPago, i),
 			Monto:            monto,
+			SaldoPendiente:   monto,
 			Estado:           "pendiente",
 		})
 	}
 	return cuotas
+}
+
+func normalizarSaldoCuota(cuota *models.CuotaCredito) {
+	if cuota.Estado == "pagada" {
+		cuota.MontoPagado = cuota.Monto
+		cuota.SaldoPendiente = 0
+		return
+	}
+	if cuota.SaldoPendiente <= 0 {
+		cuota.SaldoPendiente = roundMoney(math.Max(cuota.Monto-cuota.MontoPagado, 0))
+	}
 }
 
 func calcularVencimientoCuota(fechaInicio time.Time, frecuencia string, numero uint) time.Time {
@@ -1084,16 +1576,33 @@ func actualizarEstadoVentaPorCuotas(tx *gorm.DB, idVenta uint) error {
 		Count(&pendientes).Error; err != nil {
 		return err
 	}
+	var saldoPendiente float64
+	if err := tx.Model(&models.CuotaCredito{}).
+		Select("coalesce(sum(saldo_pendiente), 0)").
+		Where("id_venta_vehiculo = ?", idVenta).
+		Scan(&saldoPendiente).Error; err != nil {
+		return err
+	}
+	var venta models.VentaVehiculo
+	if err := tx.Select("tipo_cambio_usado").Where("id = ?", idVenta).First(&venta).Error; err != nil {
+		return err
+	}
 
-	updates := map[string]interface{}{}
+	saldoPendiente = roundMoney(saldoPendiente)
+	updates := map[string]interface{}{
+		"saldo":     saldoPendiente,
+		"saldo_bob": roundMoney(saldoPendiente * venta.TipoCambioUsado),
+	}
 	if pendientes == 0 {
 		updates["estado_venta"] = estadoVentaPagado
 		updates["estado_pago"] = "Pagado completo"
-		updates["saldo"] = 0
-		updates["saldo_bob"] = 0
 	} else {
 		updates["estado_venta"] = estadoVentaEnCredito
-		updates["estado_pago"] = "Pendiente"
+		if saldoPendiente > 0 {
+			updates["estado_pago"] = "Parcial"
+		} else {
+			updates["estado_pago"] = "Pendiente"
+		}
 	}
 	return tx.Model(&models.VentaVehiculo{}).Where("id = ?", idVenta).Updates(updates).Error
 }
@@ -1152,7 +1661,7 @@ func puedeAccederVenta(r *http.Request, id interface{}) bool {
 		return false
 	}
 	query := db.GDB.Model(&models.VentaVehiculo{}).Where("id = ?", id)
-	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas", "contador") {
 		query = query.Where("id_usuario = ?", principal.ID)
 	}
 	var count int64
@@ -1206,6 +1715,32 @@ func normalizarFrecuenciaPago(frecuencia string) (string, error) {
 	}
 }
 
+func normalizarEstadoTramiteBancario(estado string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(estado)) {
+	case "", "pendiente":
+		return "Pendiente", nil
+	case "en evaluacion", "en evaluaciÃ³n":
+		return "En evaluacion", nil
+	case "aprobado":
+		return "Aprobado", nil
+	case "rechazado":
+		return "Rechazado", nil
+	default:
+		return "", errors.New("Estado del tramite bancario no valido")
+	}
+}
+
+func normalizarEstadoDesembolsoBanco(estado string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(estado)) {
+	case "", "pendiente":
+		return "Pendiente", nil
+	case "registrado", "desembolsado":
+		return "Registrado", nil
+	default:
+		return "", errors.New("Estado de desembolso no valido")
+	}
+}
+
 func normalizarMetodoPago(metodo string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(metodo)) {
 	case "", "efectivo":
@@ -1214,6 +1749,8 @@ func normalizarMetodoPago(metodo string) (string, error) {
 		return "QR", nil
 	case "transferencia":
 		return "Transferencia", nil
+	case "tarjeta":
+		return "Tarjeta", nil
 	case "mixto":
 		return "Mixto", nil
 	default:
@@ -1229,6 +1766,8 @@ func normalizarMetodoPagoSimple(metodo string) (string, error) {
 		return "QR", nil
 	case "transferencia":
 		return "Transferencia", nil
+	case "tarjeta":
+		return "Tarjeta", nil
 	default:
 		return "", errors.New("Metodo de pago no valido")
 	}
@@ -1318,7 +1857,9 @@ func ventasVehiculosQuery() string {
 			coalesce(pv.total_usd, vv.pago_usd, 0) as pago_usd,
 			coalesce(pv.total_bob, vv.pago_bob, 0) as pago_bob,
 			coalesce(pv.pagos, '[]'::json) as pagos,
+			coalesce(pe.pagos_enganche, '[]'::json) as pagos_enganche,
 			coalesce(pv.detalle_pago, '') as detalle_pago,
+			coalesce(pe.detalle_enganche, '') as detalle_enganche,
 			coalesce(vv.saldo_bob, 0) as saldo_bob,
 			vv.cuota_inicial,
 			vv.saldo,
@@ -1335,6 +1876,14 @@ func ventasVehiculosQuery() string {
 			coalesce(to_char(vv.fecha_entrega, 'YYYY-MM-DD'), '') as fecha_entrega,
 			coalesce(vv.referencia_bancaria, '') as referencia_bancaria,
 			coalesce(vv.estado_desembolso, '') as estado_desembolso,
+			coalesce(vv.banco_entidad_financiera, '') as banco_entidad_financiera,
+			coalesce(vv.estado_tramite_bancario, '') as estado_tramite_bancario,
+			coalesce(vv.monto_financiar_banco, 0) as monto_financiar_banco,
+			coalesce(to_char(vv.fecha_estimada_desembolso, 'YYYY-MM-DD'), '') as fecha_estimada_desembolso,
+			coalesce(vv.numero_operacion_banco, '') as numero_operacion_banco,
+			coalesce(to_char(vv.fecha_desembolso_banco, 'YYYY-MM-DD'), '') as fecha_desembolso_banco,
+			coalesce(vv.monto_desembolsado_banco, 0) as monto_desembolsado_banco,
+			coalesce(concat_ws(' ', udb.nombre, udb.apellido), '') as usuario_desembolso_banco,
 			coalesce(vv.monto_financiado, 0) as monto_financiado,
 			coalesce(vv.numero_cuotas, 0) as numero_cuotas,
 			coalesce(vv.monto_cuota, 0) as monto_cuota,
@@ -1360,6 +1909,7 @@ func ventasVehiculosQuery() string {
 		left join segmento_vehiculo seg on seg.id = v.id_segmento
 		left join usuarios u on u.id = vv.id_usuario
 		left join usuarios upr on upr.id = vv.id_usuario_pago_reserva
+		left join usuarios udb on udb.id = vv.id_usuario_desembolso_banco
 		left join lateral (
 			select
 				json_agg(json_build_object('id', p.id, 'moneda', p.moneda, 'metodo', p.metodo, 'monto', p.monto) order by p.id) as pagos,
@@ -1370,5 +1920,12 @@ func ventasVehiculosQuery() string {
 				coalesce(sum(case when p.moneda = 'BOB' then p.monto else 0 end), 0) as total_bob
 			from pagos_venta p
 			where p.venta_id = vv.id
-		) pv on true`
+		) pv on true
+		left join lateral (
+			select
+				json_agg(json_build_object('id', p.id, 'moneda', p.moneda, 'metodo', p.metodo, 'monto', p.monto, 'tipo_cambio', p.tipo_cambio, 'equivalente_usd', p.equivalente_usd) order by p.id) as pagos_enganche,
+				string_agg(concat(p.moneda, ' ', p.metodo, ' ', p.monto::text), ' | ' order by p.id) as detalle_enganche
+			from pagos_enganche_bancario p
+			where p.id_venta_vehiculo = vv.id
+		) pe on true`
 }

@@ -38,26 +38,6 @@ func main() {
 		return
 	}
 
-<<<<<<< HEAD
-	if err := db.GDB.AutoMigrate(
-		/* migraciones */
-		&models.Rol{},
-		&models.CategoriaVehiculo{},
-		&models.SegmentoVehiculo{},
-		&models.MarcaVehiculo{},
-		&models.AnioVehiculo{},
-		&models.Usuario{},
-		&models.Cliente{},
-		&models.Vehiculo{},
-		&models.VentaVehiculo{},
-		&models.PagoVenta{},
-		&models.CuotaCredito{},
-		&models.GastoVario{},
-		&models.Movimiento{},
-	); err != nil {
-		log.Fatal("Error al migrar los modelos de la db:", err)
-	}
-=======
 	if migrationsEnabled() {
 		if err := db.GDB.AutoMigrate(
 			/* migraciones */
@@ -70,13 +50,18 @@ func main() {
 			&models.Cliente{},
 			&models.Vehiculo{},
 			&models.VentaVehiculo{},
+			&models.PagoVenta{},
+			&models.PagoEngancheBancario{},
 			&models.CuotaCredito{},
+			&models.PagoCuotaCredito{},
 			&models.GastoVario{},
 			&models.Movimiento{},
 		); err != nil {
 			log.Fatal("Error al migrar los modelos de la db:", err)
 		}
->>>>>>> ce0f81ff614f699155429184a484737c5946b6a6
+		if err := backfillCuotasCredito(); err != nil {
+			log.Fatal("Error al actualizar saldos de cuotas de credito:", err)
+		}
 
 		if err := functions.CreacionInicial(); err != nil {
 			log.Fatal("Error al iniciar los datos predeterminados: ", err)
@@ -132,6 +117,16 @@ func migrationsEnabled() bool {
 		return enabled
 	}
 	return !strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production")
+}
+
+func backfillCuotasCredito() error {
+	return db.GDB.Exec(`
+		update cuotas_credito
+		set
+			monto_pagado = case when estado = 'pagada' then monto else 0 end,
+			saldo_pendiente = case when estado = 'pagada' then 0 else monto end
+		where monto_pagado = 0 and saldo_pendiente = 0
+	`).Error
 }
 
 func envOrDefault(name, fallback string) string {

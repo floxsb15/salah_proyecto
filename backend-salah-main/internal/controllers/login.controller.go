@@ -70,7 +70,7 @@ func (auth) AuthLoginWeb(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	normalizedRole := strings.ToLower(strings.TrimSpace(role.Nombre))
-	if normalizedRole != "admin" && normalizedRole != "encargado de ventas" && normalizedRole != "vendedor" {
+	if normalizedRole != "admin" && normalizedRole != "encargado de ventas" && normalizedRole != "vendedor" && normalizedRole != "contador" {
 		authAttempts.failure(ip, credentials.Usuario)
 		http.Error(w, "Credenciales incorrectas", http.StatusUnauthorized)
 		return

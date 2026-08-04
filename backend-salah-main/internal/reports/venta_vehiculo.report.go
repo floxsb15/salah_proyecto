@@ -44,6 +44,10 @@ type VentaVehiculoReporte struct {
 	FechaEntrega             string  `gorm:"column:fecha_entrega"`
 	ReferenciaBancaria       string  `gorm:"column:referencia_bancaria"`
 	EstadoDesembolso         string  `gorm:"column:estado_desembolso"`
+	BancoEntidadFinanciera   string  `gorm:"column:banco_entidad_financiera"`
+	EstadoTramiteBancario    string  `gorm:"column:estado_tramite_bancario"`
+	MontoFinanciarBanco      float64 `gorm:"column:monto_financiar_banco"`
+	FechaEstimadaDesembolso  string  `gorm:"column:fecha_estimada_desembolso"`
 	Observacion              string  `gorm:"column:observacion"`
 	Cliente                  string  `gorm:"column:cliente"`
 	CICliente                string  `gorm:"column:ci_cliente"`
@@ -84,6 +88,10 @@ var QueryVentaVehiculoReporte = `
 		coalesce(to_char(vv.fecha_entrega, 'YYYY-MM-DD'), '') as fecha_entrega,
 		coalesce(vv.referencia_bancaria, '') as referencia_bancaria,
 		coalesce(vv.estado_desembolso, '') as estado_desembolso,
+		coalesce(vv.banco_entidad_financiera, '') as banco_entidad_financiera,
+		coalesce(vv.estado_tramite_bancario, '') as estado_tramite_bancario,
+		coalesce(vv.monto_financiar_banco, 0) as monto_financiar_banco,
+		coalesce(to_char(vv.fecha_estimada_desembolso, 'YYYY-MM-DD'), '') as fecha_estimada_desembolso,
 		coalesce(vv.observacion, '') as observacion,
 		concat_ws(' ', c.nombre, c.apellido) as cliente,
 		coalesce(c.ci, '') as ci_cliente,
@@ -117,7 +125,7 @@ func ReporteVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Autenticacion requerida", http.StatusUnauthorized)
 		return
 	}
-	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas") {
+	if !security.CurrentUserHasRole(r, "admin", "encargado de ventas", "contador") {
 		var count int64
 		if err := db.GDB.Table("ventas_vehiculos").Where("id = ? AND id_usuario = ?", id, principal.ID).Count(&count).Error; err != nil || count != 1 {
 			http.Error(w, "Venta no encontrada", http.StatusNotFound)
@@ -221,6 +229,12 @@ func makePDFVentaVehiculo(id string) (core.Maroto, VentaVehiculoReporte, error) 
 		addPairRow(m, "Saldo", moneyPDF(venta.Saldo), "Validez proforma", fmt.Sprintf("%d dias", venta.ValidezProformaDias))
 	}
 	addPairRow(m, "Vence proforma", formatDatePDF(venta.FechaVencimientoProforma), "Desembolso", emptyPDF(venta.EstadoDesembolso))
+
+	if venta.TipoVenta == "credito_bancario" {
+		addSectionTitle(m, "Credito bancario")
+		addPairRow(m, "Banco", emptyPDF(venta.BancoEntidadFinanciera), "Tramite", emptyPDF(venta.EstadoTramiteBancario))
+		addPairRow(m, "Financia banco", moneyPDF(venta.MontoFinanciarBanco), "Fecha estimada", emptyPDF(formatDatePDF(venta.FechaEstimadaDesembolso)))
+	}
 
 	if venta.ReferenciaBancaria != "" || venta.Observacion != "" {
 		addSectionTitle(m, "Notas")

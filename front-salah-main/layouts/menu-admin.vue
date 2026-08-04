@@ -52,6 +52,13 @@
             <span>Catalogo Vehiculo</span>
           </a>
         </router-link>
+        <router-link to="/admin/reportes-contables" custom v-slot="{ href, navigate, isActive }">
+          <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors"
+             :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
+            <i class="pi pi-file-export text-yellow-400" :class="{ '!text-black': isActive }"></i>
+            <span>Reportes</span>
+          </a>
+        </router-link>
         <div>
           <button
             type="button"
@@ -189,6 +196,10 @@
               <NuxtLink to="/admin/creditos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
                 <i class="pi pi-credit-card text-yellow-400"></i>
                 <span>Creditos</span>
+              </NuxtLink>
+              <NuxtLink to="/admin/reportes-contables" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
+                <i class="pi pi-file-export text-yellow-400"></i>
+                <span>Reportes</span>
               </NuxtLink>
             </div>
             <SalesNotifications :userData="userData" />

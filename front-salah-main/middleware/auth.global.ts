@@ -20,8 +20,11 @@ export default defineNuxtRouteMiddleware((to) => {
   if (isPublic) {
     return navigateTo(homeForRole(user.rol));
   }
-  if (to.path.startsWith('/admin') && user.rol !== 'admin') {
+  if (to.path.startsWith('/admin') && !['admin', 'contador'].includes(user.rol)) {
     return navigateTo(homeForRole(user.rol));
+  }
+  if (to.path.startsWith('/admin') && user.rol === 'contador' && !contadorPuedeAcceder(to.path)) {
+    return navigateTo('/admin/dashboard');
   }
   if (to.path.startsWith('/ventas') && !['admin', 'encargado de ventas', 'vendedor'].includes(user.rol)) {
     localStorage.removeItem('user');
@@ -40,5 +43,15 @@ function readStoredUser(): { rol: string; must_change_password?: boolean } | nul
 }
 
 function homeForRole(role: string): string {
-  return role === 'admin' ? '/admin/dashboard' : '/ventas/catalogo-vehiculos';
+  return ['admin', 'contador'].includes(role) ? '/admin/dashboard' : '/ventas/catalogo-vehiculos';
+}
+
+function contadorPuedeAcceder(path: string): boolean {
+  return [
+    '/admin/dashboard',
+    '/admin/creditos',
+    '/admin/historial-ventas',
+    '/admin/historial-reservas',
+    '/admin/reportes-contables'
+  ].some((allowedPath) => path === allowedPath || path.startsWith(`${allowedPath}/`));
 }

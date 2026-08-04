@@ -131,7 +131,7 @@
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="detalleVisible" modal header="Seguimiento del credito" :style="{ width: '62rem', maxWidth: '95vw' }">
+    <Dialog v-model:visible="detalleVisible" modal header="Seguimiento del credito" :style="{ width: '92rem', maxWidth: '98vw' }">
       <div v-if="creditoSeleccionado" class="flex flex-col gap-4">
         <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div class="rounded-lg border border-gray-200 p-3">
@@ -156,7 +156,7 @@
           <Button label="Imprimir cuotas" icon="pi pi-print" size="small" severity="secondary" @click="imprimirCuotas" />
         </div>
 
-        <DataTable :value="cuotasDetalle" :loading="loadingCuotas" size="small" stripedRows>
+        <DataTable :value="cuotasDetalle" :loading="loadingCuotas" size="small" stripedRows tableStyle="min-width: 86rem">
           <template #empty>
             <p class="p-4 text-center">No hay cuotas para este credito.</p>
           </template>
@@ -166,6 +166,14 @@
           </Column>
           <Column field="monto" header="Monto" sortable>
             <template #body="slotProps">$ {{ formatPrecio(slotProps.data.monto) }}</template>
+          </Column>
+          <Column field="monto_pagado" header="Pagado/Falta" sortable>
+            <template #body="slotProps">
+              <div>
+                <p>$ {{ formatPrecio(slotProps.data.monto_pagado) }}</p>
+                <p class="text-xs text-gray-500">Falta: $ {{ formatPrecio(saldoCuota(slotProps.data)) }}</p>
+              </div>
+            </template>
           </Column>
           <Column field="monto_bob_pagado" header="Pagado Bs" sortable>
             <template #body="slotProps">
@@ -183,10 +191,20 @@
           <Column field="usuario_pago" header="Pago aceptado por" sortable>
             <template #body="slotProps">{{ slotProps.data.usuario_pago || '-' }}</template>
           </Column>
+          <Column header="Historial">
+            <template #body="slotProps">
+              <div v-if="historialCuota(slotProps.data).length" class="space-y-1 text-xs text-gray-600">
+                <p v-for="pago in historialCuota(slotProps.data)" :key="pago.id">
+                  $ {{ formatPrecio(pago.monto_usd) }} / Bs {{ formatPrecio(pago.monto_bob) }}
+                </p>
+              </div>
+              <span v-else class="text-sm text-gray-500">-</span>
+            </template>
+          </Column>
           <Column header="Accion">
             <template #body="slotProps">
               <Button
-                v-if="slotProps.data.estado !== 'pagada'"
+                v-if="slotProps.data.estado !== 'pagada' && !soloLectura"
                 label="Pagar"
                 icon="pi pi-check"
                 size="small"
@@ -194,7 +212,7 @@
                 :loading="pagandoCuotaId === slotProps.data.id"
                 @click="abrirPagoCuota(slotProps.data)"
               />
-              <span v-else class="text-sm text-gray-500">Registrada</span>
+              <span v-else class="text-sm text-gray-500">{{ slotProps.data.estado === 'pagada' ? 'Registrada' : 'Solo lectura' }}</span>
             </template>
           </Column>
         </DataTable>
@@ -211,7 +229,24 @@
           <div class="rounded-lg border border-gray-200 p-3">
             <p class="text-xs uppercase text-gray-500">Monto USD</p>
             <p class="font-semibold text-gray-900">$ {{ formatPrecio(cuotaPago.monto) }}</p>
+            <p class="text-xs text-gray-500">Falta: $ {{ formatPrecio(saldoCuota(cuotaPago)) }}</p>
           </div>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label for="monto_pago">Monto a pagar</label>
+          <InputNumber
+            id="monto_pago"
+            v-model="montoPago"
+            :min="0"
+            :max="saldoAplicablePago"
+            :minFractionDigits="2"
+            :maxFractionDigits="2"
+            fluid
+            size="small"
+            placeholder="Monto en USD"
+          />
+          <p class="text-xs text-gray-500">Saldo disponible desde esta cuota: $ {{ formatPrecio(saldoAplicablePago) }}</p>
         </div>
 
         <div class="flex flex-col gap-1">
@@ -275,11 +310,14 @@ const loadingCuotas = ref(false);
 const pagandoCuotaId = ref<number | null>(null);
 const cuotaPago = ref<any | null>(null);
 const tipoCambioPago = ref<number | null>(null);
+const montoPago = ref<number | null>(null);
 const searchQuery = ref('');
 const tipoFiltro = ref('todos');
 const estadoFiltro = ref('todos');
+const rolUsuario = ref('');
 
 const mostrarVendedor = computed(() => props.scope === 'general');
+const soloLectura = computed(() => rolUsuario.value === 'contador');
 const descripcion = computed(() => mostrarVendedor.value
   ? 'Historial general de credito directo y credito bancario.'
   : 'Seguimiento de credito directo y credito bancario del vendedor actual.'
@@ -337,10 +375,18 @@ const totalCuotasAtrasadas = computed(() => {
 });
 
 const montoPagoBOB = computed(() => {
-  return Number(cuotaPago.value?.monto || 0) * Number(tipoCambioPago.value || 0);
+  return Number(montoPago.value || 0) * Number(tipoCambioPago.value || 0);
+});
+
+const saldoAplicablePago = computed(() => {
+  if (!cuotaPago.value) return 0;
+  return cuotasDetalle.value
+    .filter((cuota: any) => cuota.numero >= cuotaPago.value.numero && cuota.estado !== 'pagada')
+    .reduce((total: number, cuota: any) => total + saldoCuota(cuota), 0);
 });
 
 onMounted(async () => {
+  rolUsuario.value = obtenerRolUsuarioActual();
   await obtenerCreditos();
 });
 
@@ -395,15 +441,17 @@ function enriquecerCredito(venta: any, cuotas: any[]) {
   const pendientes = cuotas.filter((cuota: any) => cuota.estado !== 'pagada');
   const atrasadas = cuotas.filter((cuota: any) => cuota.estado === 'atrasada');
   const proximaCuota = pendientes[0];
+  const saldoPendiente = cuotas.reduce((total: number, cuota: any) => total + saldoCuota(cuota), 0);
 
   return {
     ...venta,
+    saldo: saldoPendiente,
     cuotas_pagadas: cuotas.filter((cuota: any) => cuota.estado === 'pagada').length,
     cuotas_pendientes: pendientes.length,
     cuotas_atrasadas: atrasadas.length,
     tiene_atraso: atrasadas.length > 0,
     proxima_cuota_fecha: proximaCuota?.fecha_vencimiento || '',
-    proxima_cuota_monto: proximaCuota?.monto || 0
+    proxima_cuota_monto: proximaCuota ? saldoCuota(proximaCuota) : 0
   };
 }
 
@@ -430,6 +478,7 @@ async function abrirDetalle(credito: any) {
 
 function abrirPagoCuota(cuota: any) {
   cuotaPago.value = cuota;
+  montoPago.value = saldoCuota(cuota);
   tipoCambioPago.value = null;
   pagoVisible.value = true;
 }
@@ -438,10 +487,20 @@ function cerrarPagoCuota() {
   pagoVisible.value = false;
   cuotaPago.value = null;
   tipoCambioPago.value = null;
+  montoPago.value = null;
 }
 
 async function pagarCuota() {
   if (!cuotaPago.value) return;
+  const monto = Number(montoPago.value || 0);
+  if (monto <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingrese el monto a pagar', life: 3000 });
+    return;
+  }
+  if (monto > saldoAplicablePago.value) {
+    toast.add({ severity: 'warn', summary: 'Monto mayor al saldo pendiente del credito', life: 3000 });
+    return;
+  }
   if (!tipoCambioPago.value || Number(tipoCambioPago.value) <= 0) {
     toast.add({ severity: 'warn', summary: 'Ingrese el precio del dolar actual', life: 3000 });
     return;
@@ -457,11 +516,12 @@ async function pagarCuota() {
     await $fetch(server.HOST + `/api/v1/cuotas-credito/${cuotaPago.value.id}/pagar`, {
       method: 'PATCH',
       body: {
+        monto_pago: monto,
         tipo_cambio_pago: Number(tipoCambioPago.value || 0),
         id_usuario_pago: userId
       }
     });
-    toast.add({ severity: 'success', summary: 'Cuota pagada', detail: `Cobrado: Bs ${formatPrecio(montoPagoBOB.value)}`, life: 3000 });
+    toast.add({ severity: 'success', summary: 'Pago registrado', detail: `Cobrado: Bs ${formatPrecio(montoPagoBOB.value)}`, life: 3000 });
     cerrarPagoCuota();
     if (creditoSeleccionado.value) {
       await abrirDetalle(creditoSeleccionado.value);
@@ -490,6 +550,30 @@ function obtenerUsuarioActualId() {
   return user ? Number(JSON.parse(user)?.id || 0) : 0;
 }
 
+function obtenerRolUsuarioActual() {
+  const user = localStorage.getItem('user');
+  return user ? String(JSON.parse(user)?.rol || '') : '';
+}
+
+function saldoCuota(cuota: any) {
+  if (!cuota) return 0;
+  const saldo = Number(cuota.saldo_pendiente ?? 0);
+  if (saldo > 0 || cuota.estado === 'pagada') {
+    return saldo;
+  }
+  return Math.max(Number(cuota.monto || 0) - Number(cuota.monto_pagado || 0), 0);
+}
+
+function historialCuota(cuota: any) {
+  if (!cuota?.historial_pagos) return [];
+  if (Array.isArray(cuota.historial_pagos)) return cuota.historial_pagos;
+  try {
+    return JSON.parse(cuota.historial_pagos);
+  } catch {
+    return [];
+  }
+}
+
 function imprimirCuotas() {
   if (!creditoSeleccionado.value) {
     return;
@@ -500,6 +584,8 @@ function imprimirCuotas() {
       <td>${cuota.numero}</td>
       <td>${formatFecha(cuota.fecha_vencimiento)}</td>
       <td>$ ${formatPrecio(cuota.monto)}</td>
+      <td>$ ${formatPrecio(cuota.monto_pagado)}</td>
+      <td>$ ${formatPrecio(saldoCuota(cuota))}</td>
       <td>${cuota.monto_bob_pagado ? 'Bs ' + formatPrecio(cuota.monto_bob_pagado) : '-'}</td>
       <td>${labelEstadoCuota(cuota.estado)}</td>
       <td>${cuota.fecha_pago ? formatFecha(cuota.fecha_pago) : '-'}</td>
@@ -539,6 +625,8 @@ function imprimirCuotas() {
               <th>Nro.</th>
               <th>Vencimiento</th>
               <th>Monto USD</th>
+              <th>Pagado USD</th>
+              <th>Falta USD</th>
               <th>Pagado Bs</th>
               <th>Estado</th>
               <th>Fecha pago</th>
@@ -609,6 +697,7 @@ function labelEstadoCredito(estado: string) {
 
 function labelEstadoCuota(estado: string) {
   if (estado === 'pagada') return 'Pagada';
+  if (estado === 'abonada') return 'Abonada';
   if (estado === 'atrasada') return 'Atrasada';
   return 'Pendiente';
 }
@@ -621,6 +710,7 @@ function severityEstado(estado: string) {
 
 function severityCuota(estado: string) {
   if (estado === 'pagada') return 'success';
+  if (estado === 'abonada') return 'info';
   if (estado === 'atrasada') return 'danger';
   return 'warning';
 }
