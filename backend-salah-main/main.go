@@ -38,26 +38,6 @@ func main() {
 		return
 	}
 
-<<<<<<< HEAD
-	if err := db.GDB.AutoMigrate(
-		/* migraciones */
-		&models.Rol{},
-		&models.CategoriaVehiculo{},
-		&models.SegmentoVehiculo{},
-		&models.MarcaVehiculo{},
-		&models.AnioVehiculo{},
-		&models.Usuario{},
-		&models.Cliente{},
-		&models.Vehiculo{},
-		&models.VentaVehiculo{},
-		&models.PagoVenta{},
-		&models.CuotaCredito{},
-		&models.GastoVario{},
-		&models.Movimiento{},
-	); err != nil {
-		log.Fatal("Error al migrar los modelos de la db:", err)
-	}
-=======
 	if migrationsEnabled() {
 		if err := db.GDB.AutoMigrate(
 			/* migraciones */
@@ -70,13 +50,13 @@ func main() {
 			&models.Cliente{},
 			&models.Vehiculo{},
 			&models.VentaVehiculo{},
+			&models.PagoVenta{},
 			&models.CuotaCredito{},
 			&models.GastoVario{},
 			&models.Movimiento{},
 		); err != nil {
 			log.Fatal("Error al migrar los modelos de la db:", err)
 		}
->>>>>>> ce0f81ff614f699155429184a484737c5946b6a6
 
 		if err := functions.CreacionInicial(); err != nil {
 			log.Fatal("Error al iniciar los datos predeterminados: ", err)
