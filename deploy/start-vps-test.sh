@@ -30,5 +30,6 @@ docker compose --env-file "$ENV_FILE" \
   -f "$TEST_COMPOSE" \
   ps postgres backend frontend
 
-echo "Aplicacion lista en 127.0.0.1:3000 del VPS. Caddy no fue iniciado."
+echo "Aplicacion lista en el puerto definido por FRONTEND_HOST_PORT (3100 por defecto)."
+echo "El puerto solo escucha en 127.0.0.1 del VPS. Caddy no fue iniciado."
 echo "Consulte la clave inicial localmente con: grep '^INITIAL_ADMIN_PASSWORD=' deploy/.env"

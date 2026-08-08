@@ -1,6 +1,6 @@
 # Prueba en VPS sin dominio y sin Caddy
 
-Este flujo publica el frontend unicamente en `127.0.0.1:3000` del VPS. PostgreSQL y el backend permanecen en la red privada de Docker. Para abrir la aplicacion se utiliza un tunel SSH.
+Este flujo publica el frontend unicamente en `127.0.0.1:3100` del VPS. PostgreSQL y el backend permanecen en la red privada de Docker. Para abrir la aplicacion se utiliza un tunel SSH. El puerto puede cambiarse con `FRONTEND_HOST_PORT` en `deploy/.env`.
 
 ## Antes de comenzar
 
@@ -33,7 +33,7 @@ Se levantan solamente `postgres`, `backend` y `frontend`. El servicio `caddy` no
 Mantenga abierto este comando en PowerShell:
 
 ```powershell
-ssh -L 3000:127.0.0.1:3000 german@srv989157.hstgr.cloud
+ssh -L 3000:127.0.0.1:3100 german@62.72.11.106
 ```
 
 Luego abra `http://localhost:3000/login`. El puerto 3000 no necesita abrirse en el firewall del VPS.

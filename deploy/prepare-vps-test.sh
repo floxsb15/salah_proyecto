@@ -27,6 +27,7 @@ INITIAL_ADMIN_PASSWORD=$(openssl rand -hex 20)
 umask 077
 {
   printf '%s\n' 'DOMAIN=localhost'
+  printf '%s\n' 'FRONTEND_HOST_PORT=3100'
   printf 'AUTH_TOKEN_SECRET=%s\n' "$AUTH_TOKEN_SECRET"
   printf '%s\n' ''
   printf '%s\n' 'DB_HOST=postgres'
