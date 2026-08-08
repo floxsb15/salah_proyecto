@@ -121,7 +121,7 @@ async function iniciarSesion() {
     localStorage.setItem('user', JSON.stringify(response));
     if (response.must_change_password) {
       router.push('/cambiar-contrasena');
-    } else if(['admin', 'contador'].includes(response.rol)){
+    } else if(response.rol === 'admin'){
       router.push('/admin/dashboard');
     } else if(['encargado de ventas', 'vendedor'].includes(response.rol)){
       router.push('/ventas/catalogo-vehiculos');
