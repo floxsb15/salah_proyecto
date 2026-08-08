@@ -118,15 +118,10 @@ async function iniciarSesion() {
       headers: { 'Content-Type': 'application/json' }
     });
 
-<<<<<<< HEAD
-    if(['admin', 'contador'].includes(response.rol)){
-      localStorage.setItem('user', JSON.stringify(response));
-=======
     localStorage.setItem('user', JSON.stringify(response));
     if (response.must_change_password) {
       router.push('/cambiar-contrasena');
-    } else if(response.rol === 'admin'){
->>>>>>> ce0f81ff614f699155429184a484737c5946b6a6
+    } else if(['admin', 'contador'].includes(response.rol)){
       router.push('/admin/dashboard');
     } else if(['encargado de ventas', 'vendedor'].includes(response.rol)){
       router.push('/ventas/catalogo-vehiculos');
