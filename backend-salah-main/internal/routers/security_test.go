@@ -15,7 +15,7 @@ func TestEveryNonLoginRouteRequiresAuthentication(t *testing.T) {
 
 	err := router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
 		path, pathErr := route.GetPathTemplate()
-		if pathErr != nil || path == "/api/v1/login" {
+		if pathErr != nil || path == "/api/v1/login" || path == "/healthz" {
 			return pathErr
 		}
 		methods, methodsErr := route.GetMethods()
@@ -36,5 +36,21 @@ func TestEveryNonLoginRouteRequiresAuthentication(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("walking routes: %v", err)
+	}
+}
+
+func TestHealthEndpointIsPublic(t *testing.T) {
+	router := mux.NewRouter()
+	InitEndPoints(router)
+
+	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("GET /healthz returned %d; want %d", response.Code, http.StatusOK)
+	}
+	if strings.TrimSpace(response.Body.String()) != "ok" {
+		t.Fatalf("GET /healthz returned %q; want %q", response.Body.String(), "ok")
 	}
 }

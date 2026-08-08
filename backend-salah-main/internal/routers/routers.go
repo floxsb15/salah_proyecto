@@ -19,6 +19,12 @@ const (
 var staffRoles = []string{roleAdmin, roleManager, roleSeller}
 
 func InitEndPoints(router *mux.Router) {
+	router.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}).Methods(http.MethodGet, http.MethodHead)
+
 	v1 := router.PathPrefix("/api/v1").Subrouter()
 
 	v1.Handle("/login", security.LimitBody(16<<10)(http.HandlerFunc(c.Auth.AuthLoginWeb))).Methods(http.MethodPost)

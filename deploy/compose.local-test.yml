@@ -1,9 +1,38 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?DB_NAME es obligatorio}
+      POSTGRES_USER: ${DB_USER:?DB_USER es obligatorio}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD es obligatorio}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - private
+
   backend:
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       APP_ENV: staging
       COOKIE_SECURE: "false"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_SSLMODE: disable
 
   frontend:
+    depends_on:
+      backend:
+        condition: service_healthy
     ports:
       - "127.0.0.1:3000:3000"
+
+volumes:
+  postgres_data:
