@@ -1,5 +1,10 @@
 <template>
   <Toast />
+  <ProformaVehicularModal
+    :visible="proformaVisible"
+    :vehiculo="vehiculoProforma"
+    @close="cerrarProforma"
+  />
 
   <div class="flex flex-col gap-4">
     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -107,14 +112,26 @@
             <Tag :value="String(vehiculo.cantidad_disponible || 0)" :severity="Number(vehiculo.cantidad_disponible || 0) > 0 ? 'info' : 'danger'" />
           </div>
 
-          <Button
-            label="Registrar venta"
-            icon="pi pi-shopping-cart"
-            size="small"
-            class="w-full"
-            :disabled="vehiculo.estado !== 'Activo' || Number(vehiculo.cantidad_disponible || 0) <= 0"
-            @click="irACompra(vehiculo.id)"
-          />
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Button
+              label="Registrar venta"
+              icon="pi pi-shopping-cart"
+              size="small"
+              class="w-full"
+              :disabled="vehiculo.estado !== 'Activo' || Number(vehiculo.cantidad_disponible || 0) <= 0"
+              @click="irACompra(vehiculo.id)"
+            />
+            <Button
+              label="Generar proforma"
+              icon="pi pi-file-pdf"
+              size="small"
+              severity="secondary"
+              outlined
+              class="w-full"
+              :disabled="vehiculo.estado !== 'Activo' || Number(vehiculo.cantidad_disponible || 0) <= 0"
+              @click="abrirProforma(vehiculo)"
+            />
+          </div>
         </div>
       </article>
     </div>
@@ -125,6 +142,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { server } from '~/server/server';
+import ProformaVehicularModal from '~/components/ventas/ProformaVehicularModal.vue';
 import Button from 'primevue/button';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -144,6 +162,8 @@ const categoriaSeleccionada = ref<string | null>(null);
 const segmentoSeleccionado = ref<string | null>(null);
 const loading = ref(true);
 const indiceCarrusel = ref(0);
+const proformaVisible = ref(false);
+const vehiculoProforma = ref<any | null>(null);
 let carruselTimer: ReturnType<typeof setInterval> | null = null;
 
 const categorias = computed(() => {
@@ -231,6 +251,16 @@ function irACompra(idVehiculo: number) {
     path: '/admin/venta-vehiculo',
     query: { id: idVehiculo }
   });
+}
+
+function abrirProforma(vehiculo: any) {
+  vehiculoProforma.value = vehiculo;
+  proformaVisible.value = true;
+}
+
+function cerrarProforma() {
+  proformaVisible.value = false;
+  vehiculoProforma.value = null;
 }
 
 function etiquetaVehiculo(vehiculo: any) {

@@ -26,6 +26,7 @@ const (
 	estadoVentaCompletada    = "Completada"
 	estadoVentaAnulada       = "Anulada"
 	estadoVentaEnCredito     = "en_credito"
+	estadoVentaImportando    = "Importando"
 	estadoVentaPagado        = "pagado_completo"
 	tipoVentaContado         = "Contado"
 	tipoVentaCredito         = "Credito"
@@ -35,34 +36,44 @@ const (
 )
 
 type VentaVehiculoDAO struct {
-	IDCliente           uint           `json:"id_cliente"`
-	IDVehiculo          uint           `json:"id_vehiculo"`
-	IDUsuario           uint           `json:"id_usuario"`
-	Fecha               string         `json:"fecha"`
-	TipoVenta           string         `json:"tipo_venta"`
-	Cantidad            uint           `json:"cantidad"`
-	TipoCambio          float64        `json:"tipo_cambio"`
-	PagoUSD             float64        `json:"pago_usd"`
-	PagoBOB             float64        `json:"pago_bob"`
-	Pagos               []PagoVentaDAO `json:"pagos"`
-	ValidezProformaDias uint           `json:"validez_proforma_dias"`
-	EstadoVenta         string         `json:"estado_venta"`
-	EstadoPago          string         `json:"estado_pago"`
-	MetodoPago          string         `json:"metodo_pago"`
-	EstadoEntrega       string         `json:"estado_entrega"`
-	FechaEntrega        string         `json:"fecha_entrega"`
-	ReferenciaBancaria  string         `json:"referencia_bancaria"`
-	EstadoDesembolso    string         `json:"estado_desembolso"`
-	MontoReserva        float64        `json:"monto_reserva"`
-	MontoInicial        float64        `json:"monto_inicial"`
-	NumeroCuotas        uint           `json:"numero_cuotas"`
-	FechaInicioCredito  string         `json:"fecha_inicio_credito"`
-	FrecuenciaPago      string         `json:"frecuencia_pago"`
-	TieneRespaldo       bool           `json:"tiene_respaldo"`
-	TipoGarantia        string         `json:"tipo_garantia"`
-	DocumentoGarantia   string         `json:"documento_garantia"`
-	DatosGarante        string         `json:"datos_garante"`
-	Observacion         string         `json:"observacion"`
+	IDCliente             uint           `json:"id_cliente"`
+	IDVehiculo            uint           `json:"id_vehiculo"`
+	IDUsuario             uint           `json:"id_usuario"`
+	Fecha                 string         `json:"fecha"`
+	TipoVenta             string         `json:"tipo_venta"`
+	Cantidad              uint           `json:"cantidad"`
+	TipoCambio            float64        `json:"tipo_cambio"`
+	PagoUSD               float64        `json:"pago_usd"`
+	PagoBOB               float64        `json:"pago_bob"`
+	Pagos                 []PagoVentaDAO `json:"pagos"`
+	ValidezProformaDias   uint           `json:"validez_proforma_dias"`
+	EstadoVenta           string         `json:"estado_venta"`
+	EstadoPago            string         `json:"estado_pago"`
+	MetodoPago            string         `json:"metodo_pago"`
+	EstadoEntrega         string         `json:"estado_entrega"`
+	FechaEntrega          string         `json:"fecha_entrega"`
+	ReferenciaBancaria    string         `json:"referencia_bancaria"`
+	EstadoDesembolso      string         `json:"estado_desembolso"`
+	MontoReserva          float64        `json:"monto_reserva"`
+	MontoInicial          float64        `json:"monto_inicial"`
+	NumeroCuotas          uint           `json:"numero_cuotas"`
+	FechaInicioCredito    string         `json:"fecha_inicio_credito"`
+	FrecuenciaPago        string         `json:"frecuencia_pago"`
+	TieneRespaldo         bool           `json:"tiene_respaldo"`
+	TipoGarantia          string         `json:"tipo_garantia"`
+	DocumentoGarantia     string         `json:"documento_garantia"`
+	DatosGarante          string         `json:"datos_garante"`
+	Observacion           string         `json:"observacion"`
+	TipoReserva           string         `json:"tipo_reserva"`
+	PedidoMarca           string         `json:"pedido_marca"`
+	PedidoModelo          string         `json:"pedido_modelo"`
+	PedidoAnio            uint           `json:"pedido_anio"`
+	PedidoColor           string         `json:"pedido_color"`
+	PedidoVersion         string         `json:"pedido_version"`
+	PedidoPaisOrigen      string         `json:"pedido_pais_origen"`
+	PedidoProveedor       string         `json:"pedido_proveedor"`
+	PedidoLlegadaEstimada string         `json:"pedido_llegada_estimada"`
+	PrecioPedido          float64        `json:"precio_pedido"`
 }
 
 type PagoVentaDAO struct {
@@ -87,6 +98,7 @@ type CompletarReservaDAO struct {
 	MontoPago     float64 `json:"monto_pago"`
 	IDUsuarioPago uint    `json:"id_usuario_pago"`
 	Observacion   string  `json:"observacion"`
+	IDVehiculo    uint    `json:"id_vehiculo"`
 }
 
 type VentaVehiculoHistorialDAO struct {
@@ -137,6 +149,15 @@ type VentaVehiculoHistorialDAO struct {
 	Segmento                 string          `json:"segmento"`
 	Vendedor                 string          `json:"vendedor"`
 	UsuarioPagoReserva       string          `json:"usuario_pago_reserva"`
+	TipoReserva              string          `json:"tipo_reserva"`
+	PedidoMarca              string          `json:"pedido_marca"`
+	PedidoModelo             string          `json:"pedido_modelo"`
+	PedidoAnio               uint            `json:"pedido_anio"`
+	PedidoColor              string          `json:"pedido_color"`
+	PedidoVersion            string          `json:"pedido_version"`
+	PedidoPaisOrigen         string          `json:"pedido_pais_origen"`
+	PedidoProveedor          string          `json:"pedido_proveedor"`
+	PedidoLlegadaEstimada    string          `json:"pedido_llegada_estimada"`
 }
 
 type CuotaCreditoDAO struct {
@@ -188,15 +209,24 @@ func AgregarVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx := db.GDB.Begin()
-	if err := validarDisponibilidadVenta(tx, nuevaVenta.IDVehiculo, nuevaVenta.Cantidad, 0); err != nil {
+	if nuevaVenta.IDVehiculo != nil {
+		if err := validarDisponibilidadVenta(tx, *nuevaVenta.IDVehiculo, nuevaVenta.Cantidad, 0); err != nil {
+			tx.Rollback()
+			eliminarArchivoVenta(documentoGuardado)
+			http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if ventaDescuentaStock(nuevaVenta.EstadoVenta) && nuevaVenta.IDVehiculo == nil {
 		tx.Rollback()
 		eliminarArchivoVenta(documentoGuardado)
-		http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
+		http.Error(w, "Debe vincular un vehiculo de inventario antes de completar", http.StatusBadRequest)
 		return
 	}
 
-	if ventaDescuentaStock(nuevaVenta.EstadoVenta) {
-		if err := descontarCantidadVehiculo(tx, nuevaVenta.IDVehiculo, nuevaVenta.Cantidad); err != nil {
+	if ventaDescuentaStock(nuevaVenta.EstadoVenta) && nuevaVenta.IDVehiculo != nil {
+		if err := descontarCantidadVehiculo(tx, *nuevaVenta.IDVehiculo, nuevaVenta.Cantidad); err != nil {
 			tx.Rollback()
 			eliminarArchivoVenta(documentoGuardado)
 			http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
@@ -275,7 +305,7 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Cliente no valido")
 	}
-	idVehiculo, err := parseUintFormValue(r.FormValue("id_vehiculo"))
+	idVehiculo, err := parseUintFormValueWithZero(r.FormValue("id_vehiculo"))
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Vehiculo no valido")
 	}
@@ -319,35 +349,53 @@ func ventaVehiculoDAOFromForm(r *http.Request) (VentaVehiculoDAO, error) {
 	if err != nil {
 		return VentaVehiculoDAO{}, errors.New("Numero de cuotas no valido")
 	}
+	pedidoAnio, err := parseUintFormValueWithZero(r.FormValue("pedido_anio"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Anio de pedido no valido")
+	}
+	precioPedido, err := parseFloatFormValueWithZero(r.FormValue("precio_pedido"))
+	if err != nil {
+		return VentaVehiculoDAO{}, errors.New("Precio de pedido no valido")
+	}
 
 	return VentaVehiculoDAO{
-		IDCliente:           idCliente,
-		IDVehiculo:          idVehiculo,
-		IDUsuario:           idUsuario,
-		Fecha:               r.FormValue("fecha"),
-		TipoVenta:           r.FormValue("tipo_venta"),
-		Cantidad:            cantidad,
-		TipoCambio:          tipoCambio,
-		PagoUSD:             pagoUSD,
-		PagoBOB:             pagoBOB,
-		Pagos:               pagos,
-		ValidezProformaDias: validez,
-		EstadoVenta:         r.FormValue("estado_venta"),
-		EstadoPago:          r.FormValue("estado_pago"),
-		MetodoPago:          r.FormValue("metodo_pago"),
-		EstadoEntrega:       r.FormValue("estado_entrega"),
-		FechaEntrega:        r.FormValue("fecha_entrega"),
-		ReferenciaBancaria:  r.FormValue("referencia_bancaria"),
-		EstadoDesembolso:    r.FormValue("estado_desembolso"),
-		MontoReserva:        montoReserva,
-		MontoInicial:        montoInicial,
-		NumeroCuotas:        numeroCuotas,
-		FechaInicioCredito:  r.FormValue("fecha_inicio_credito"),
-		FrecuenciaPago:      r.FormValue("frecuencia_pago"),
-		TieneRespaldo:       parseBoolFormValue(r.FormValue("tiene_respaldo")),
-		TipoGarantia:        r.FormValue("tipo_garantia"),
-		DatosGarante:        r.FormValue("datos_garante"),
-		Observacion:         r.FormValue("observacion"),
+		IDCliente:             idCliente,
+		IDVehiculo:            idVehiculo,
+		IDUsuario:             idUsuario,
+		Fecha:                 r.FormValue("fecha"),
+		TipoVenta:             r.FormValue("tipo_venta"),
+		Cantidad:              cantidad,
+		TipoCambio:            tipoCambio,
+		PagoUSD:               pagoUSD,
+		PagoBOB:               pagoBOB,
+		Pagos:                 pagos,
+		ValidezProformaDias:   validez,
+		EstadoVenta:           r.FormValue("estado_venta"),
+		EstadoPago:            r.FormValue("estado_pago"),
+		MetodoPago:            r.FormValue("metodo_pago"),
+		EstadoEntrega:         r.FormValue("estado_entrega"),
+		FechaEntrega:          r.FormValue("fecha_entrega"),
+		ReferenciaBancaria:    r.FormValue("referencia_bancaria"),
+		EstadoDesembolso:      r.FormValue("estado_desembolso"),
+		MontoReserva:          montoReserva,
+		MontoInicial:          montoInicial,
+		NumeroCuotas:          numeroCuotas,
+		FechaInicioCredito:    r.FormValue("fecha_inicio_credito"),
+		FrecuenciaPago:        r.FormValue("frecuencia_pago"),
+		TieneRespaldo:         parseBoolFormValue(r.FormValue("tiene_respaldo")),
+		TipoGarantia:          r.FormValue("tipo_garantia"),
+		DatosGarante:          r.FormValue("datos_garante"),
+		Observacion:           r.FormValue("observacion"),
+		TipoReserva:           r.FormValue("tipo_reserva"),
+		PedidoMarca:           r.FormValue("pedido_marca"),
+		PedidoModelo:          r.FormValue("pedido_modelo"),
+		PedidoAnio:            pedidoAnio,
+		PedidoColor:           r.FormValue("pedido_color"),
+		PedidoVersion:         r.FormValue("pedido_version"),
+		PedidoPaisOrigen:      r.FormValue("pedido_pais_origen"),
+		PedidoProveedor:       r.FormValue("pedido_proveedor"),
+		PedidoLlegadaEstimada: r.FormValue("pedido_llegada_estimada"),
+		PrecioPedido:          precioPedido,
 	}, nil
 }
 
@@ -650,14 +698,19 @@ func ActualizarEstadoVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !ventaDescuentaStock(estadoAnterior) && ventaDescuentaStock(venta.EstadoVenta) {
-		if err := descontarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
+		if venta.IDVehiculo == nil {
+			tx.Rollback()
+			http.Error(w, "Debe vincular un vehiculo de inventario antes de completar", http.StatusBadRequest)
+			return
+		}
+		if err := descontarCantidadVehiculo(tx, *venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
 			http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 			return
 		}
 	}
-	if ventaDescuentaStock(estadoAnterior) && !ventaDescuentaStock(venta.EstadoVenta) {
-		if err := restaurarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
+	if ventaDescuentaStock(estadoAnterior) && !ventaDescuentaStock(venta.EstadoVenta) && venta.IDVehiculo != nil {
+		if err := restaurarCantidadVehiculo(tx, *venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
 			respondInternalError(w, "Error al restaurar disponibilidad al actualizar venta", err)
 			return
@@ -689,8 +742,8 @@ func AnularVentaVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "La venta ya esta anulada", http.StatusBadRequest)
 		return
 	}
-	if ventaDescuentaStock(venta.EstadoVenta) {
-		if err := restaurarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
+	if ventaDescuentaStock(venta.EstadoVenta) && venta.IDVehiculo != nil {
+		if err := restaurarCantidadVehiculo(tx, *venta.IDVehiculo, venta.Cantidad); err != nil {
 			tx.Rollback()
 			respondInternalError(w, "Error al restaurar disponibilidad al anular venta", err)
 			return
@@ -744,6 +797,14 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "La reserva esta anulada", http.StatusBadRequest)
 		return
 	}
+	if venta.TipoReserva == "pedido" && venta.IDVehiculo == nil {
+		if payload.IDVehiculo == 0 {
+			tx.Rollback()
+			http.Error(w, "Debe crear o seleccionar el vehiculo importado antes de completar", http.StatusBadRequest)
+			return
+		}
+		venta.IDVehiculo = &payload.IDVehiculo
+	}
 
 	montoPago := roundMoney(payload.MontoPago)
 	saldoPendiente := roundMoney(venta.Saldo)
@@ -769,7 +830,12 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := descontarCantidadVehiculo(tx, venta.IDVehiculo, venta.Cantidad); err != nil {
+	if venta.IDVehiculo == nil {
+		tx.Rollback()
+		http.Error(w, "Debe vincular un vehiculo de inventario antes de completar", http.StatusBadRequest)
+		return
+	}
+	if err := descontarCantidadVehiculo(tx, *venta.IDVehiculo, venta.Cantidad); err != nil {
 		tx.Rollback()
 		http.Error(w, "Vehiculo sin disponibilidad suficiente", http.StatusBadRequest)
 		return
@@ -814,8 +880,8 @@ func CompletarReservaVehiculo(w http.ResponseWriter, r *http.Request) {
 }
 
 func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, error) {
-	if payload.IDCliente == 0 || payload.IDVehiculo == 0 {
-		return models.VentaVehiculo{}, errors.New("Cliente y vehiculo son requeridos")
+	if payload.IDCliente == 0 {
+		return models.VentaVehiculo{}, errors.New("Cliente requerido")
 	}
 	if payload.Cantidad == 0 {
 		return models.VentaVehiculo{}, errors.New("Cantidad requerida")
@@ -826,18 +892,27 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		return models.VentaVehiculo{}, errors.New("Fecha no valida")
 	}
 
-	var vehiculo models.Vehiculo
-	if err := db.GDB.Where("id = ?", payload.IDVehiculo).First(&vehiculo).Error; err != nil {
-		return models.VentaVehiculo{}, errors.New("Vehiculo no encontrado")
-	}
-	if !vehiculo.Estado {
-		return models.VentaVehiculo{}, errors.New("Vehiculo no disponible")
-	}
-
 	tipoVenta, err := normalizarTipoVenta(payload.TipoVenta)
 	if err != nil {
 		return models.VentaVehiculo{}, err
 	}
+	tipoReserva := normalizarTipoReserva(payload.TipoReserva)
+	esReservaPedido := tipoVenta == tipoVentaReserva && tipoReserva == "pedido"
+
+	var vehiculo models.Vehiculo
+	var idVehiculo *uint
+	if payload.IDVehiculo != 0 {
+		if err := db.GDB.Where("id = ?", payload.IDVehiculo).First(&vehiculo).Error; err != nil {
+			return models.VentaVehiculo{}, errors.New("Vehiculo no encontrado")
+		}
+		if !vehiculo.Estado {
+			return models.VentaVehiculo{}, errors.New("Vehiculo no disponible")
+		}
+		idVehiculo = &payload.IDVehiculo
+	} else if !esReservaPedido {
+		return models.VentaVehiculo{}, errors.New("Vehiculo requerido")
+	}
+
 	estadoVenta := estadoVentaRegistrada
 	if strings.TrimSpace(payload.EstadoVenta) != "" {
 		estadoVenta, err = normalizarEstadoVenta(payload.EstadoVenta)
@@ -851,6 +926,15 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		validez = 15
 	}
 	precioUnidad := roundMoney(vehiculo.Precio)
+	if esReservaPedido {
+		precioUnidad = roundMoney(payload.PrecioPedido)
+		if precioUnidad <= 0 {
+			return models.VentaVehiculo{}, errors.New("Precio de pedido requerido")
+		}
+		if strings.TrimSpace(payload.PedidoMarca) == "" || strings.TrimSpace(payload.PedidoModelo) == "" || payload.PedidoAnio == 0 || strings.TrimSpace(payload.PedidoPaisOrigen) == "" {
+			return models.VentaVehiculo{}, errors.New("Datos del vehiculo a pedido incompletos")
+		}
+	}
 	precioTotal := roundMoney(precioUnidad * float64(payload.Cantidad))
 	tipoCambio := roundMoney(payload.TipoCambio)
 	if tipoCambio <= 0 {
@@ -917,6 +1001,9 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		}
 		saldo = roundMoney(precioTotal - cuotaInicial)
 		estadoVenta = estadoVentaRegistrada
+		if esReservaPedido {
+			estadoVenta = estadoVentaImportando
+		}
 		if strings.TrimSpace(payload.EstadoPago) == "" {
 			payload.EstadoPago = "Pagado completo"
 		}
@@ -980,7 +1067,7 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 
 	return models.VentaVehiculo{
 		IDCliente:                payload.IDCliente,
-		IDVehiculo:               payload.IDVehiculo,
+		IDVehiculo:               idVehiculo,
 		IDUsuario:                idUsuario,
 		Fecha:                    fecha,
 		FechaVenta:               time.Now(),
@@ -1015,6 +1102,15 @@ func construirVentaVehiculo(payload VentaVehiculoDAO) (models.VentaVehiculo, err
 		ReferenciaBancaria:       strings.TrimSpace(payload.ReferenciaBancaria),
 		EstadoDesembolso:         strings.TrimSpace(payload.EstadoDesembolso),
 		Observacion:              strings.TrimSpace(payload.Observacion),
+		TipoReserva:              tipoReserva,
+		PedidoMarca:              strings.TrimSpace(payload.PedidoMarca),
+		PedidoModelo:             strings.TrimSpace(payload.PedidoModelo),
+		PedidoAnio:               payload.PedidoAnio,
+		PedidoColor:              strings.TrimSpace(payload.PedidoColor),
+		PedidoVersion:            strings.TrimSpace(payload.PedidoVersion),
+		PedidoPaisOrigen:         strings.TrimSpace(payload.PedidoPaisOrigen),
+		PedidoProveedor:          strings.TrimSpace(payload.PedidoProveedor),
+		PedidoLlegadaEstimada:    strings.TrimSpace(payload.PedidoLlegadaEstimada),
 	}, nil
 }
 
@@ -1176,6 +1272,15 @@ func normalizarTipoVenta(tipo string) (string, error) {
 	}
 }
 
+func normalizarTipoReserva(tipo string) string {
+	switch strings.ToLower(strings.TrimSpace(tipo)) {
+	case "pedido", "a_pedido", "a pedido":
+		return "pedido"
+	default:
+		return "stock"
+	}
+}
+
 func normalizarEstadoVenta(estado string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(estado)) {
 	case "registrada":
@@ -1186,6 +1291,8 @@ func normalizarEstadoVenta(estado string) (string, error) {
 		return estadoVentaAnulada, nil
 	case "en_credito", "en credito":
 		return estadoVentaEnCredito, nil
+	case "importando", "en transito", "en_tránsito", "en_transito":
+		return estadoVentaImportando, nil
 	case "pagado_completo", "pagado completo":
 		return estadoVentaPagado, nil
 	default:
@@ -1229,6 +1336,8 @@ func normalizarMetodoPagoSimple(metodo string) (string, error) {
 		return "QR", nil
 	case "transferencia":
 		return "Transferencia", nil
+	case "tarjeta":
+		return "Tarjeta", nil
 	default:
 		return "", errors.New("Metodo de pago no valido")
 	}
@@ -1304,7 +1413,7 @@ func ventasVehiculosQuery() string {
 		select
 			vv.id,
 			vv.id_cliente,
-			vv.id_vehiculo,
+			coalesce(vv.id_vehiculo, 0) as id_vehiculo,
 			vv.id_usuario,
 			to_char(vv.fecha, 'YYYY-MM-DD') as fecha,
 			to_char(coalesce(vv.fecha_venta, vv.fecha), 'YYYY-MM-DD HH24:MI:SS') as fecha_venta,
@@ -1345,17 +1454,30 @@ func ventasVehiculosQuery() string {
 			coalesce(vv.documento_garantia, '') as documento_garantia,
 			coalesce(vv.datos_garante, '') as datos_garante,
 			coalesce(vv.observacion, '') as observacion,
+			coalesce(vv.tipo_reserva, 'stock') as tipo_reserva,
+			coalesce(vv.pedido_marca, '') as pedido_marca,
+			coalesce(vv.pedido_modelo, '') as pedido_modelo,
+			coalesce(vv.pedido_anio, 0) as pedido_anio,
+			coalesce(vv.pedido_color, '') as pedido_color,
+			coalesce(vv.pedido_version, '') as pedido_version,
+			coalesce(vv.pedido_pais_origen, '') as pedido_pais_origen,
+			coalesce(vv.pedido_proveedor, '') as pedido_proveedor,
+			coalesce(vv.pedido_llegada_estimada, '') as pedido_llegada_estimada,
 			(vv.estado_venta = 'Registrada' and vv.fecha_vencimiento_proforma < current_date) as proforma_vencida,
 			concat_ws(' ', c.nombre, c.apellido) as cliente,
 			coalesce(c.ci, '') as ci_cliente,
-			coalesce(nullif(concat_ws(' ', nullif(trim(v.marca), ''), nullif(trim(v.modelo), ''), nullif(v.anio::text, '0')), ''), v.nombre) as vehiculo,
+			case
+				when coalesce(vv.tipo_reserva, 'stock') = 'pedido' then
+					coalesce(nullif(concat_ws(' ', nullif(trim(vv.pedido_marca), ''), nullif(trim(vv.pedido_modelo), ''), nullif(vv.pedido_anio::text, '0')), ''), 'Vehiculo a pedido')
+				else coalesce(nullif(concat_ws(' ', nullif(trim(v.marca), ''), nullif(trim(v.modelo), ''), nullif(v.anio::text, '0')), ''), v.nombre, 'Vehiculo')
+			end as vehiculo,
 			coalesce(cat.nombre, '') as categoria,
 			coalesce(seg.nombre, '') as segmento,
 			coalesce(concat_ws(' ', u.nombre, u.apellido), '') as vendedor,
 			coalesce(concat_ws(' ', upr.nombre, upr.apellido), '') as usuario_pago_reserva
 		from ventas_vehiculos vv
 		inner join clientes c on c.id = vv.id_cliente
-		inner join vehiculos v on v.id = vv.id_vehiculo
+		left join vehiculos v on v.id = vv.id_vehiculo
 		left join categoria_vehiculo cat on cat.id = v.id_categoria
 		left join segmento_vehiculo seg on seg.id = v.id_segmento
 		left join usuarios u on u.id = vv.id_usuario

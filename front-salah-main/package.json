@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "build": "node --max-old-space-size=4096 ./node_modules/nuxt/bin/nuxt.mjs build",
+    "dev": "node --max-old-space-size=4096 ./node_modules/nuxt/bin/nuxt.mjs dev",
+    "generate": "node --max-old-space-size=4096 ./node_modules/nuxt/bin/nuxt.mjs generate",
+    "preview": "node --max-old-space-size=4096 ./node_modules/nuxt/bin/nuxt.mjs preview",
+    "postinstall": "node --max-old-space-size=4096 ./node_modules/nuxt/bin/nuxt.mjs prepare"
   },
   "dependencies": {
     "@primeuix/themes": "^1.2.1",

@@ -1,0 +1,17 @@
+./catalogo_vehiculo.controller.go
+./categoria_vehiculo.controller.go
+./cliente.controller.go
+./compra_auto.controller.go
+./gastos.controller.go
+./http_errors.go
+./login.controller.go
+./login_limiter.go
+./movimientos.controller.go
+./proveedor_auto.controller.go
+./segmento_vehiculo.controller.go
+./session.controller.go
+./upload_security.go
+./usuario.controller.go
+./vehiculo.controller.go
+./venta_vehiculo.controller.go
+./login_limiter_test.go

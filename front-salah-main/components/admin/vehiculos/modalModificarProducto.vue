@@ -129,38 +129,6 @@
             </Message>
           </div>
 
-          <div v-if="esAdmin" class="flex flex-col gap-1">
-            <label for="precio_compra"> Precio compra </label>
-            <InputNumber
-              id="precio_compra"
-              name="precio_compra"
-              v-model="initialValues.precio_compra"
-              mode="currency"
-              currency="USD"
-              locale="es-BO"
-              :min="0"
-              fluid
-              size="small"
-            />
-            <Message v-if="$form.precio_compra?.invalid" severity="error" size="small" variant="simple">
-              {{ $form.precio_compra.error?.message }}
-            </Message>
-          </div>
-
-          <div v-if="esAdmin" class="flex flex-col gap-1">
-            <label for="margen_ganancia"> Margen ganancia </label>
-            <InputNumber
-              id="margen_ganancia"
-              :model-value="margenGanancia"
-              mode="currency"
-              currency="USD"
-              locale="es-BO"
-              disabled
-              fluid
-              size="small"
-            />
-          </div>
-
           <div class="flex flex-col gap-1">
             <label for="cantidad_disponible"> Cantidad disponible </label>
             <InputNumber
@@ -316,7 +284,6 @@ const garantiaKm = ref<number | null>(null)
 
 const initialValues = reactive({
   precio: 0,
-  precio_compra: 0,
   cantidad_disponible: 0,
   id_categoria: 0,
   id_segmento: null as number | null,
@@ -355,8 +322,6 @@ const AniosDisponibles = computed(() => {
   }
   return anios
 })
-const esAdmin = computed(() => getActorUserRol() === 'admin')
-const margenGanancia = computed(() => Number(initialValues.precio || 0) - Number(initialValues.precio_compra || 0))
 
 onMounted( async () => {
   try {
@@ -364,7 +329,6 @@ onMounted( async () => {
       method: 'GET'
     })
     initialValues.precio = resValue.precio
-    initialValues.precio_compra = Number(resValue.precio_compra || 0)
     initialValues.cantidad_disponible = Number(resValue.cantidad_disponible || 0)
     initialValues.id_categoria = resValue.id_categoria
     initialValues.marca = resValue.marca || ''
@@ -428,7 +392,6 @@ watch(() => initialValues.tipo_techo, (newValue) => {
 const resolver = ref(zodResolver(
   z.object({
     precio: z.number(),
-    precio_compra: z.number().min(0, { message: 'Precio de compra no valido.' }),
     cantidad_disponible: z.number().min(0, { message: 'Cantidad no valida.' }),
     modelo: z.string().min(1, { message: 'Modelo requerido.' }),
     marca: z.string().min(1, { message: 'Marca requerida.' }),
@@ -470,9 +433,6 @@ async function onFormSubmit({ valid } : any ) {
       formData.append("id_categoria", String(initialValues.id_categoria))
       formData.append("id_segmento", initialValues.id_segmento ? String(initialValues.id_segmento) : "")
       formData.append("estado", initialValues.estado)
-      if (esAdmin.value) {
-        formData.append("precio_compra", String(initialValues.precio_compra || 0))
-      }
       const fotosNuevas = initialValues.fotos.filter((foto): foto is File => foto instanceof File)
       if (fotosNuevas.length > 0) {
         fotosNuevas.forEach((foto) => {
@@ -546,12 +506,4 @@ function obtenerGarantia() {
   return partes.length > 0 ? partes.join(' o ') : initialValues.garantia
 }
 
-function getActorUserRol() {
-  try {
-    const user = localStorage.getItem('user')
-    return user ? JSON.parse(user)?.rol || '' : ''
-  } catch {
-    return ''
-  }
-}
 </script>

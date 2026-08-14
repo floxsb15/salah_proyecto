@@ -118,6 +118,7 @@ async function iniciarSesion() {
       headers: { 'Content-Type': 'application/json' }
     });
 
+
     localStorage.setItem('user', JSON.stringify(response));
     if (response.must_change_password) {
       router.push('/cambiar-contrasena');

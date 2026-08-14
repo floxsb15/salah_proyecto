@@ -128,38 +128,6 @@
             </Message>
           </div>
 
-          <div v-if="esAdmin" class="flex flex-col gap-1">
-            <label for="precio_compra"> Precio compra </label>
-            <InputNumber
-              id="precio_compra"
-              name="precio_compra"
-              v-model="initialValues.precio_compra"
-              mode="currency"
-              currency="USD"
-              locale="es-BO"
-              :min="0"
-              fluid
-              size="small"
-            />
-            <Message v-if="$form.precio_compra?.invalid" severity="error" size="small" variant="simple">
-              {{ $form.precio_compra.error?.message }}
-            </Message>
-          </div>
-
-          <div v-if="esAdmin" class="flex flex-col gap-1">
-            <label for="margen_ganancia"> Margen ganancia </label>
-            <InputNumber
-              id="margen_ganancia"
-              :model-value="margenGanancia"
-              mode="currency"
-              currency="USD"
-              locale="es-BO"
-              disabled
-              fluid
-              size="small"
-            />
-          </div>
-
           <div class="flex flex-col gap-1">
             <label for="cantidad_disponible"> Cantidad disponible </label>
             <InputNumber
@@ -314,7 +282,6 @@ const garantiaKm = ref<number | null>(null)
 
 const initialValues = reactive({
   precio: 0,
-  precio_compra: 0,
   cantidad_disponible: 1,
   marca: '',
   modelo: '',
@@ -342,8 +309,6 @@ const SegmentosFiltrados = computed(() => {
 })
 const MarcasActivas = computed(() => Marcas.value.filter(marca => marca.estado === 'Activo'))
 const AniosActivos = computed(() => Anios.value.filter(anio => anio.estado === 'Activo'))
-const esAdmin = computed(() => getActorUserRol() === 'admin')
-const margenGanancia = computed(() => Number(initialValues.precio || 0) - Number(initialValues.precio_compra || 0))
 
 onMounted( async () => {
   const [ resCategorias, resSegmentos, resMarcas, resAnios ] = await Promise.all([
@@ -383,7 +348,6 @@ watch(visible, (newValue) => {
 const resolver = ref(zodResolver(
   z.object({
     precio: z.number().min(1, { message: 'Precio requerido.' }),
-    precio_compra: z.number().min(0, { message: 'Precio de compra no valido.' }),
     cantidad_disponible: z.number().min(1, { message: 'Cantidad requerida.' }),
     modelo: z.string().min(1, { message: 'Modelo requerido.' }),
     marca: z.string().min(1, { message: 'Marca requerida.' }),
@@ -423,9 +387,6 @@ async function onFormSubmit({ valid } : any ) {
       formData.append("id_categoria", String(initialValues.id_categoria))
       formData.append("id_segmento", initialValues.id_segmento ? String(initialValues.id_segmento) : "")
       formData.append("estado", initialValues.estado)
-      if (esAdmin.value) {
-        formData.append("precio_compra", String(initialValues.precio_compra || 0))
-      }
       initialValues.fotos.forEach((foto) => {
         formData.append("fotos", foto)
       })
@@ -476,12 +437,4 @@ function obtenerGarantia() {
   return partes.join(' o ')
 }
 
-function getActorUserRol() {
-  try {
-    const user = localStorage.getItem('user')
-    return user ? JSON.parse(user)?.rol || '' : ''
-  } catch {
-    return ''
-  }
-}
 </script>

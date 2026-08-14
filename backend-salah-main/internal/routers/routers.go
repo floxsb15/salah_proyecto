@@ -52,10 +52,30 @@ func InitEndPoints(router *mux.Router) {
 	protected(v1, "/ventas", c.AgregarVentaVehiculo, http.MethodPost, staffRoles...)
 	protected(v1, "/cuotas-credito/{id}/pagar", c.PagarCuotaCredito, http.MethodPatch, roleAdmin, roleManager)
 
+	protected(v1, "/pedidos/{id}/recibir", c.RecibirPedidoVehiculo, http.MethodPatch, roleAdmin, roleManager)
+	protected(v1, "/pedidos/{id}/transito", c.MarcarPedidoVehiculoEnTransito, http.MethodPatch, roleAdmin, roleManager)
+	protected(v1, "/pedidos/{id}/completar", c.CompletarPedidoVehiculo, http.MethodPatch, roleAdmin, roleManager)
+	protected(v1, "/pedidos/{id}", c.ObtenerPedidoVehiculo, http.MethodGet, staffRoles...)
+	protected(v1, "/pedidos", c.ObtenerPedidosVehiculos, http.MethodGet, staffRoles...)
+	protected(v1, "/pedidos", c.AgregarPedidoVehiculo, http.MethodPost, staffRoles...)
+
+	protected(v1, "/proformas-vehiculares", c.ObtenerProformasVehiculares, http.MethodGet, staffRoles...)
+	protected(v1, "/proformas-vehiculares", c.AgregarProformaVehicular, http.MethodPost, staffRoles...)
+
 	protected(v1, "/vehiculos/{id}", c.ObtenerVehiculo, http.MethodGet, staffRoles...)
 	protected(v1, "/vehiculos/{id}", c.ModificarVehiculo, http.MethodPut, roleAdmin, roleManager)
 	protected(v1, "/vehiculos", c.ObtenerVehiculos, http.MethodGet, staffRoles...)
 	protected(v1, "/vehiculos", c.AgregarVehiculo, http.MethodPost, roleAdmin, roleManager)
+
+	protected(v1, "/compras-autos", c.ObtenerComprasAutos, http.MethodGet, roleAdmin)
+	protected(v1, "/compras-autos", c.AgregarCompraAuto, http.MethodPost, roleAdmin)
+	protected(v1, "/compras-autos/{id}/completar-pago", c.CompletarPagoCompraAuto, http.MethodPatch, roleAdmin)
+
+	protected(v1, "/proveedores-autos/{id}/historial-compras", c.ObtenerHistorialComprasProveedor, http.MethodGet, roleAdmin)
+	protected(v1, "/proveedores-autos/{id}", c.ObtenerProveedorAuto, http.MethodGet, roleAdmin)
+	protected(v1, "/proveedores-autos/{id}", c.ModificarProveedorAuto, http.MethodPut, roleAdmin)
+	protected(v1, "/proveedores-autos", c.ObtenerProveedoresAutos, http.MethodGet, roleAdmin)
+	protected(v1, "/proveedores-autos", c.AgregarProveedorAuto, http.MethodPost, roleAdmin)
 
 	protected(v1, "/categorias-vehiculos/{id}", c.ObtenerCategoria, http.MethodGet, staffRoles...)
 	protected(v1, "/categorias-vehiculos/{id}", c.ModificarCategoria, http.MethodPut, roleAdmin, roleManager)
@@ -81,6 +101,7 @@ func InitEndPoints(router *mux.Router) {
 
 	protected(v1, "/reportes/vehiculos", r.ReporteProductos, http.MethodGet, staffRoles...)
 	protected(v1, "/reportes/ventas/{id}", r.ReporteVentaVehiculo, http.MethodGet, staffRoles...)
+	protected(v1, "/reportes/proformas-vehiculares/{id}", r.ReporteProformaVehicular, http.MethodGet, staffRoles...)
 }
 
 func protected(router *mux.Router, path string, handler http.HandlerFunc, method string, roles ...string) {

@@ -5,7 +5,7 @@ import "time"
 type VentaVehiculo struct {
 	ID                       uint       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	IDCliente                uint       `gorm:"column:id_cliente;not null" json:"id_cliente"`
-	IDVehiculo               uint       `gorm:"column:id_vehiculo;not null" json:"id_vehiculo"`
+	IDVehiculo               *uint      `gorm:"column:id_vehiculo" json:"id_vehiculo"`
 	IDUsuario                *uint      `gorm:"column:id_usuario" json:"id_usuario"`
 	Fecha                    time.Time  `gorm:"column:fecha;not null" json:"fecha"`
 	FechaVenta               time.Time  `gorm:"column:fecha_venta;not null;default:now()" json:"fecha_venta"`
@@ -41,6 +41,15 @@ type VentaVehiculo struct {
 	EstadoDesembolso         string     `gorm:"column:estado_desembolso;size:60" json:"estado_desembolso"`
 	Observacion              string     `gorm:"column:observacion" json:"observacion"`
 	IDUsuarioPagoReserva     *uint      `gorm:"column:id_usuario_pago_reserva" json:"id_usuario_pago_reserva"`
+	TipoReserva              string     `gorm:"column:tipo_reserva;size:20;not null;default:stock" json:"tipo_reserva"`
+	PedidoMarca              string     `gorm:"column:pedido_marca;size:120" json:"pedido_marca"`
+	PedidoModelo             string     `gorm:"column:pedido_modelo;size:120" json:"pedido_modelo"`
+	PedidoAnio               uint       `gorm:"column:pedido_anio;not null;default:0" json:"pedido_anio"`
+	PedidoColor              string     `gorm:"column:pedido_color;size:80" json:"pedido_color"`
+	PedidoVersion            string     `gorm:"column:pedido_version" json:"pedido_version"`
+	PedidoPaisOrigen         string     `gorm:"column:pedido_pais_origen;size:120" json:"pedido_pais_origen"`
+	PedidoProveedor          string     `gorm:"column:pedido_proveedor;size:180" json:"pedido_proveedor"`
+	PedidoLlegadaEstimada    string     `gorm:"column:pedido_llegada_estimada;size:180" json:"pedido_llegada_estimada"`
 
 	Cliente            Cliente  `gorm:"foreignKey:IDCliente;reference:ID" json:"-"`
 	Vehiculo           Vehiculo `gorm:"foreignKey:IDVehiculo;reference:ID" json:"-"`

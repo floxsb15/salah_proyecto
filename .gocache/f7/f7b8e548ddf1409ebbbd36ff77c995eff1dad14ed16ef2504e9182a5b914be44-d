@@ -1,0 +1,12 @@
+./anio_vehiculo.go
+./categoria_vehiculo.go
+./cliente.go
+./compra_auto.go
+./gastos_varios.go
+./marca_vehiculo.go
+./movimientos_gastos.go
+./rol.go
+./segmento_vehiculo.go
+./usuario.go
+./vehiculo.go
+./venta_vehiculo.go

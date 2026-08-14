@@ -9,7 +9,7 @@
       </div>
 
       <!-- Menu -->
-      <nav class="flex-1 p-2 space-y-2">
+      <nav class="flex-1 overflow-y-auto p-2 space-y-2">
         <router-link to="/admin/dashboard" custom v-slot="{ href, navigate, isActive }">
           <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
              :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
@@ -31,107 +31,90 @@
             <span>Clientes</span>
           </a>
         </router-link>
-        <router-link v-if="!isContador" to="/admin/categorias-vehiculos" custom v-slot="{ href, navigate, isActive }">
-          <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
-             :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-            <i class="pi pi-tags text-yellow-400" :class="{ '!text-black': isActive }"></i>
-            <span>Categorias Vehiculo</span>
-          </a>
-        </router-link>
-        <router-link v-if="!isContador" to="/admin/vehiculos" custom v-slot="{ href, navigate, isActive }">
-          <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
-             :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-            <i class="pi pi-car text-yellow-400" :class="{ '!text-black': isActive }"></i>
-            <span>Vehiculos</span>
-          </a>
-        </router-link>
-        <router-link v-if="!isContador" to="/admin/catalogo-vehiculos" custom v-slot="{ href, navigate, isActive }">
-          <a :href="href" @click="navigate" class="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors" 
-             :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-            <i class="pi pi-images text-yellow-400" :class="{ '!text-black': isActive }"></i>
-            <span>Catalogo Vehiculo</span>
-          </a>
-        </router-link>
-        <div>
+
+        <div v-if="inventarioItems.length">
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
-            :class="creditosOpen || route.path.includes('/admin/creditos') ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
-            @click="creditosOpen = !creditosOpen"
+            :class="inventarioOpen || isSectionActive(inventarioItems) ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
+            @click="inventarioOpen = !inventarioOpen"
           >
-            <i class="pi pi-credit-card text-yellow-400" :class="{ '!text-black': creditosOpen || route.path.includes('/admin/creditos') }"></i>
-            <span class="flex-1">Creditos</span>
-            <i class="pi text-xs" :class="creditosOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+            <i class="pi pi-box text-yellow-400" :class="{ '!text-black': inventarioOpen || isSectionActive(inventarioItems) }"></i>
+            <span class="flex-1">Inventario</span>
+            <i class="pi text-xs" :class="inventarioOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
           </button>
-          <div v-if="creditosOpen" class="mt-1 space-y-1 pl-6">
-            <router-link to="/admin/creditos" custom v-slot="{ href, navigate, isActive }">
+          <div v-if="inventarioOpen" class="mt-1 space-y-1 pl-6">
+            <router-link v-for="item in inventarioItems" :key="item.to" :to="item.to" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-list text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial General</span>
-              </a>
-            </router-link>
-            <router-link v-if="!isContador" to="/admin/creditos-personal" custom v-slot="{ href, navigate, isActive }">
-              <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
-                 :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial Personal</span>
+                <i :class="[item.icon, isActive ? '!text-black' : 'text-yellow-400']"></i>
+                <span>{{ item.label }}</span>
               </a>
             </router-link>
           </div>
         </div>
-        <div>
+
+        <div v-if="ventasItems.length">
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
-            :class="ventasOpen || route.path.includes('/admin/historial-ventas') ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
+            :class="ventasOpen || isSectionActive(ventasItems) ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
             @click="ventasOpen = !ventasOpen"
           >
-            <i class="pi pi-history text-yellow-400" :class="{ '!text-black': ventasOpen || route.path.includes('/admin/historial-ventas') }"></i>
+            <i class="pi pi-history text-yellow-400" :class="{ '!text-black': ventasOpen || isSectionActive(ventasItems) }"></i>
             <span class="flex-1">Ventas</span>
             <i class="pi text-xs" :class="ventasOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
           </button>
           <div v-if="ventasOpen" class="mt-1 space-y-1 pl-6">
-            <router-link to="/admin/historial-ventas" custom v-slot="{ href, navigate, isActive }">
+            <router-link v-for="item in ventasItems" :key="item.to" :to="item.to" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-list text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial General</span>
-              </a>
-            </router-link>
-            <router-link v-if="!isContador" to="/admin/historial-ventas-personal" custom v-slot="{ href, navigate, isActive }">
-              <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
-                 :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial Personal</span>
+                <i :class="[item.icon, isActive ? '!text-black' : 'text-yellow-400']"></i>
+                <span>{{ item.label }}</span>
               </a>
             </router-link>
           </div>
         </div>
-        <div>
+
+        <div v-if="reservasItems.length">
           <button
             type="button"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
-            :class="reservasOpen || route.path.includes('/admin/historial-reservas') ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
+            :class="reservasOpen || isSectionActive(reservasItems) ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
             @click="reservasOpen = !reservasOpen"
           >
-            <i class="pi pi-bookmark text-yellow-400" :class="{ '!text-black': reservasOpen || route.path.includes('/admin/historial-reservas') }"></i>
+            <i class="pi pi-bookmark text-yellow-400" :class="{ '!text-black': reservasOpen || isSectionActive(reservasItems) }"></i>
             <span class="flex-1">Reservas</span>
             <i class="pi text-xs" :class="reservasOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
           </button>
           <div v-if="reservasOpen" class="mt-1 space-y-1 pl-6">
-            <router-link to="/admin/historial-reservas" custom v-slot="{ href, navigate, isActive }">
+            <router-link v-for="item in reservasItems" :key="item.to" :to="item.to" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-list text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial General</span>
+                <i :class="[item.icon, isActive ? '!text-black' : 'text-yellow-400']"></i>
+                <span>{{ item.label }}</span>
               </a>
             </router-link>
-            <router-link v-if="!isContador" to="/admin/historial-reservas-personal" custom v-slot="{ href, navigate, isActive }">
+          </div>
+        </div>
+
+        <div v-if="creditosItems.length">
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+            :class="creditosOpen || isSectionActive(creditosItems) ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'"
+            @click="creditosOpen = !creditosOpen"
+          >
+            <i class="pi pi-credit-card text-yellow-400" :class="{ '!text-black': creditosOpen || isSectionActive(creditosItems) }"></i>
+            <span class="flex-1">Creditos</span>
+            <i class="pi text-xs" :class="creditosOpen ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          </button>
+          <div v-if="creditosOpen" class="mt-1 space-y-1 pl-6">
+            <router-link v-for="item in creditosItems" :key="item.to" :to="item.to" custom v-slot="{ href, navigate, isActive }">
               <a :href="href" @click="navigate" class="flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors"
                  :class="isActive ? 'bg-yellow-400 text-black' : 'text-white hover:bg-red-900/60 hover:text-white'">
-                <i class="pi pi-user text-yellow-400" :class="{ '!text-black': isActive }"></i>
-                <span>Historial Personal</span>
+                <i :class="[item.icon, isActive ? '!text-black' : 'text-yellow-400']"></i>
+                <span>{{ item.label }}</span>
               </a>
             </router-link>
           </div>
@@ -161,36 +144,6 @@
         <!-- User Info and Logout -->
         <client-only>
           <div class="flex items-center gap-3">
-            <div class="hidden items-center gap-2 lg:flex">
-              <NuxtLink to="/admin/dashboard" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-chart-bar text-yellow-400"></i>
-                <span>Dashboard</span>
-              </NuxtLink>
-              <NuxtLink v-if="!isContador" to="/admin/clientes" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-id-card text-yellow-400"></i>
-                <span>Clientes</span>
-              </NuxtLink>
-              <NuxtLink v-if="!isContador" to="/admin/vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-car text-yellow-400"></i>
-                <span>Vehiculos</span>
-              </NuxtLink>
-              <NuxtLink v-if="!isContador" to="/admin/catalogo-vehiculos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-shopping-cart text-yellow-400"></i>
-                <span>Ventas</span>
-              </NuxtLink>
-              <NuxtLink to="/admin/historial-ventas" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-history text-yellow-400"></i>
-                <span>Historial</span>
-              </NuxtLink>
-              <NuxtLink to="/admin/historial-reservas" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-bookmark text-yellow-400"></i>
-                <span>Reservas</span>
-              </NuxtLink>
-              <NuxtLink to="/admin/creditos" class="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-white transition-colors hover:bg-red-900/60">
-                <i class="pi pi-credit-card text-yellow-400"></i>
-                <span>Creditos</span>
-              </NuxtLink>
-            </div>
             <SalesNotifications :userData="userData" />
             <div class="flex items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 px-2 py-1 transition-colors hover:border-yellow-400/60 hover:bg-neutral-800 cursor-pointer" @click="isProfileModalVisible = true">
                 <div class="h-10 w-10 overflow-hidden rounded-full border-2 border-yellow-400 bg-yellow-400 text-black shadow-[0_0_0_3px_rgba(255,215,0,0.12)]">
@@ -253,15 +206,76 @@ const userData = ref({
 const isProfileModalVisible = ref(false);
 const topSearch = useTopSearch();
 const route = useRoute();
+const inventarioOpen = ref(false);
 const ventasOpen = ref(false);
 const reservasOpen = ref(false);
 const creditosOpen = ref(false);
 const isContador = computed(() => userData.value.rol === 'contador');
+const isAdmin = computed(() => userData.value.rol === 'admin');
+const inventarioItems = computed(() => {
+  const items: Array<{ to: string; label: string; icon: string }> = [];
+
+  if (!isContador.value) {
+    items.push(
+      { to: '/admin/vehiculos', label: 'Vehiculos', icon: 'pi pi-car' },
+      { to: '/admin/categorias-vehiculos', label: 'Categorias Vehiculo', icon: 'pi pi-tags' },
+      { to: '/admin/catalogo-vehiculos', label: 'Catalogo Vehiculo', icon: 'pi pi-images' }
+    );
+  }
+
+  if (isAdmin.value) {
+    items.push(
+      { to: '/admin/compras', label: 'Compras', icon: 'pi pi-dollar' },
+      { to: '/admin/proveedores', label: 'Proveedores', icon: 'pi pi-briefcase' }
+    );
+  }
+
+  return items;
+});
+const ventasItems = computed(() => {
+  const items: Array<{ to: string; label: string; icon: string }> = [];
+
+  if (!isContador.value) {
+    items.push(
+      { to: '/admin/historial-ventas', label: 'Historial General', icon: 'pi pi-list' },
+      { to: '/admin/historial-ventas-personal', label: 'Historial Personal', icon: 'pi pi-user' },
+      { to: '/admin/proformas', label: 'Proformas', icon: 'pi pi-file-pdf' }
+    );
+  } else {
+    items.push({ to: '/admin/historial-ventas', label: 'Historial General', icon: 'pi pi-list' });
+  }
+
+  return items;
+});
+const reservasItems = computed(() => {
+  const items = [{ to: '/admin/historial-reservas', label: 'Historial General', icon: 'pi pi-list' }];
+
+  items.push({ to: '/admin/pedidos', label: 'Pedidos', icon: 'pi pi-send' });
+
+  if (!isContador.value) {
+    items.push({ to: '/admin/historial-reservas-personal', label: 'Historial Personal', icon: 'pi pi-user' });
+  }
+
+  return items;
+});
+const creditosItems = computed(() => {
+  const items = [{ to: '/admin/creditos', label: 'Historial General', icon: 'pi pi-list' }];
+
+  if (!isContador.value) {
+    items.push({ to: '/admin/creditos-personal', label: 'Historial Personal', icon: 'pi pi-user' });
+  }
+
+  return items;
+});
 const userInitials = computed(() => {
   const nombre = userData.value.nombre?.trim()?.[0] || 'U';
   const apellido = userData.value.apellido?.trim()?.[0] || '';
   return `${nombre}${apellido}`.toUpperCase();
 });
+
+function isSectionActive(items: Array<{ to: string }>) {
+  return items.some(item => route.path === item.to);
+}
 
 onMounted(async () => {
   const user = localStorage.getItem('user');

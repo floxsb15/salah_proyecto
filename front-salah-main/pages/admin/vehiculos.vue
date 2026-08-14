@@ -48,16 +48,6 @@
           $ {{ slotProps.data.precio }}
         </template>
       </Column>
-      <Column field="precio_compra" header="Precio compra" sortable>
-        <template #body="slotProps">
-          $ {{ formatPrecio(slotProps.data.precio_compra) }}
-        </template>
-      </Column>
-      <Column field="margen_ganancia" header="Margen" sortable>
-        <template #body="slotProps">
-          $ {{ formatPrecio(slotProps.data.margen_ganancia) }}
-        </template>
-      </Column>
       <Column field="cantidad_disponible" header="Disponible" sortable />
       <Column field="categoria" header="Categoría" sortable />
       <Column field="segmento" header="Segmento" sortable />
@@ -164,13 +154,6 @@ async function reporteVehiculos() {
 
 function etiquetaVehiculo(vehiculo: any) {
   return [vehiculo.marca, vehiculo.modelo, vehiculo.anio].filter(Boolean).join(' ') || vehiculo.nombre || 'Vehiculo';
-}
-
-function formatPrecio(precio: number) {
-  return Number(precio || 0).toLocaleString('es-BO', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
 }
 
 function mostrarError(summary: string, err: any) {

@@ -15,7 +15,7 @@
       <Skeleton height="22rem" />
     </div>
 
-    <div v-else-if="!vehiculo" class="flex flex-col items-center justify-center gap-2 py-16 text-gray-500">
+    <div v-else-if="!vehiculo && !esReserva" class="flex flex-col items-center justify-center gap-2 py-16 text-gray-500">
       <i class="pi pi-car text-4xl"></i>
       <p>No se encontro el vehiculo seleccionado.</p>
     </div>
@@ -23,40 +23,49 @@
     <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[24rem_1fr]">
       <section class="overflow-hidden rounded-lg border border-gray-200 bg-white">
         <div class="flex aspect-[16/10] items-center justify-center bg-gray-100">
-          <img v-if="vehiculo.imagen && vehiculo.imagen !== 'N/A'" :src="vehiculo.imagen" :alt="etiquetaVehiculo(vehiculo)" class="h-full w-full object-cover">
+          <img v-if="vehiculoEnStock && vehiculo.imagen && vehiculo.imagen !== 'N/A'" :src="vehiculo.imagen" :alt="etiquetaVehiculo(vehiculo)" class="h-full w-full object-cover">
           <i v-else class="pi pi-car text-5xl text-gray-400"></i>
         </div>
 
         <div class="flex flex-col gap-3 p-4">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
-              <h3 class="truncate text-lg font-semibold text-gray-900">{{ etiquetaVehiculo(vehiculo) }}</h3>
-              <p class="text-sm text-gray-500">{{ vehiculo.categoria || 'Sin categoria' }}<span v-if="vehiculo.segmento"> / {{ vehiculo.segmento }}</span></p>
-              <p v-if="vehiculo.version" class="text-xs text-gray-500">{{ vehiculo.version }}</p>
+              <h3 class="truncate text-lg font-semibold text-gray-900">{{ vehiculoEnStock ? etiquetaVehiculo(vehiculo) : etiquetaVehiculoPedido }}</h3>
+              <p class="text-sm text-gray-500">
+                <template v-if="vehiculoEnStock">
+                  {{ vehiculo.categoria || 'Sin categoria' }}<span v-if="vehiculo.segmento"> / {{ vehiculo.segmento }}</span>
+                </template>
+                <template v-else>Reserva a pedido / Importacion</template>
+              </p>
+              <p v-if="vehiculoEnStock && vehiculo.version" class="text-xs text-gray-500">{{ vehiculo.version }}</p>
+              <p v-if="!vehiculoEnStock && form.pedido_pais_origen" class="text-xs text-gray-500">Origen: {{ form.pedido_pais_origen }}</p>
             </div>
-            <Tag :value="vehiculo.estado" :severity="vehiculo.estado === 'Activo' ? 'success' : 'danger'" />
+            <Tag :value="vehiculoEnStock ? vehiculo.estado : 'A pedido'" :severity="vehiculoEnStock && vehiculo.estado === 'Activo' ? 'success' : 'warning'" />
           </div>
 
           <div class="grid grid-cols-3 gap-2 text-sm">
             <div class="rounded-md bg-gray-50 p-3">
               <span class="text-gray-500">Precio USD</span>
-              <strong class="block text-gray-900">$ {{ formatPrecio(vehiculo.precio) }}</strong>
+              <strong class="block text-gray-900">$ {{ formatPrecio(precioUnidad) }}</strong>
             </div>
             <div class="rounded-md bg-gray-50 p-3">
               <span class="text-gray-500">Stock fisico</span>
-              <strong class="block text-gray-900">{{ vehiculo.cantidad_disponible || 0 }}</strong>
+              <strong class="block text-gray-900">{{ vehiculoEnStock ? (vehiculo.cantidad_disponible || 0) : 'N/A' }}</strong>
             </div>
             <div class="rounded-md bg-gray-50 p-3">
               <span class="text-gray-500">Disponible venta</span>
-              <strong class="block text-gray-900">{{ disponibilidadVenta }}</strong>
+              <strong class="block text-gray-900">{{ vehiculoEnStock ? disponibilidadVenta : 'Pedido' }}</strong>
             </div>
           </div>
 
-          <div class="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-gray-700">
+          <div v-if="vehiculoEnStock" class="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-gray-700">
             La reserva aplica solo mientras la venta este registrada y la proforma no este vencida.
             <span v-if="cantidadReservadaVigente > 0" class="block pt-1 font-semibold">
               Reservado por proformas vigentes: {{ cantidadReservadaVigente }}.
             </span>
+          </div>
+          <div v-else class="rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-gray-700">
+            Esta reserva queda en estado Importando hasta que el vehiculo llegue y se registre en inventario.
           </div>
         </div>
       </section>
@@ -67,6 +76,55 @@
             <label for="cliente">Cliente</label>
             <Select id="cliente" v-model="form.id_cliente" :options="clientes" option-label="nombreCompleto" option-value="id" placeholder="Seleccione un cliente" filter fluid size="small" />
           </div>
+
+          <div v-if="esReserva" class="flex flex-col gap-1 lg:col-span-2">
+            <label for="tipo_reserva">Tipo de reserva</label>
+            <Select id="tipo_reserva" v-model="form.tipo_reserva" :options="tiposReserva" option-label="label" option-value="value" fluid size="small" />
+          </div>
+
+          <div v-if="esReserva && !esReservaPedido" class="flex flex-col gap-1 lg:col-span-2">
+            <label for="id_vehiculo">Vehiculo en stock</label>
+            <Select id="id_vehiculo" v-model="form.id_vehiculo" :options="vehiculos" option-label="nombreCompleto" option-value="id" placeholder="Seleccione vehiculo del catalogo" filter fluid size="small" />
+          </div>
+
+          <section v-if="esReservaPedido" class="grid grid-cols-1 gap-3 rounded-md border border-orange-200 bg-orange-50 p-3 lg:col-span-2 md:grid-cols-3">
+            <div class="flex flex-col gap-1">
+              <label for="pedido_marca">Marca</label>
+              <InputText id="pedido_marca" v-model="form.pedido_marca" placeholder="Ej. Toyota" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_modelo">Modelo</label>
+              <InputText id="pedido_modelo" v-model="form.pedido_modelo" placeholder="Ej. Land Cruiser" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_anio">Anio</label>
+              <InputNumber id="pedido_anio" v-model="form.pedido_anio" :min="1900" :useGrouping="false" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_color">Color</label>
+              <InputText id="pedido_color" v-model="form.pedido_color" placeholder="Ej. Blanco perlado" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_pais_origen">Pais de origen</label>
+              <InputText id="pedido_pais_origen" v-model="form.pedido_pais_origen" placeholder="Ej. Japon" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_proveedor">Proveedor</label>
+              <InputText id="pedido_proveedor" v-model="form.pedido_proveedor" placeholder="Opcional" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="pedido_llegada_estimada">Llegada estimada</label>
+              <InputText id="pedido_llegada_estimada" v-model="form.pedido_llegada_estimada" placeholder="Fecha o rango" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="precio_pedido">Precio pactado USD</label>
+              <InputNumber id="precio_pedido" v-model="form.precio_pedido" mode="currency" currency="USD" locale="es-BO" :min="0" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1 md:col-span-3">
+              <label for="pedido_version">Version / especificaciones</label>
+              <Textarea id="pedido_version" v-model="form.pedido_version" rows="2" auto-resize fluid />
+            </div>
+          </section>
 
           <div class="flex flex-col gap-1">
             <label for="fecha">Fecha</label>
@@ -405,6 +463,7 @@ const { descargarPDFVenta } = useVentaPdf();
 const loading = ref(true);
 const saving = ref(false);
 const vehiculo = ref<any>(null);
+const vehiculos = ref<any[]>([]);
 const clientes = ref<any[]>([]);
 const ventas = ref<any[]>([]);
 const documentoGarantia = ref<File | null>(null);
@@ -418,8 +477,13 @@ const monedasPago = ref(['USD', 'BOB']);
 const estadosEntrega = ref(['Pendiente', 'Entregado']);
 const estadosDesembolso = ref(['Pendiente', 'Desembolsado']);
 const frecuenciasPago = ref(['mensual', 'quincenal', 'semanal']);
+const tiposReserva = ref([
+  { label: 'Vehiculo en stock', value: 'stock' },
+  { label: 'Vehiculo a pedido', value: 'pedido' }
+]);
 
 const form = reactive({
+  id_vehiculo: null as number | null,
   id_cliente: null as number | null,
   fecha: new Date().toISOString().slice(0, 10),
   tipo_venta: 'Contado',
@@ -446,10 +510,22 @@ const form = reactive({
   tiene_respaldo: false,
   tipo_garantia: '',
   datos_garante: '',
+  tipo_reserva: 'stock',
+  pedido_marca: '',
+  pedido_modelo: '',
+  pedido_anio: new Date().getFullYear(),
+  pedido_color: '',
+  pedido_version: '',
+  pedido_pais_origen: '',
+  pedido_proveedor: '',
+  pedido_llegada_estimada: '',
+  precio_pedido: 0,
   observacion: ''
 });
 
-const precioUnidad = computed(() => Number(vehiculo.value?.precio_usd || vehiculo.value?.precio || 0));
+const vehiculoEnStock = computed(() => !esReservaPedido.value && !!vehiculo.value);
+const esReservaPedido = computed(() => esReserva.value && form.tipo_reserva === 'pedido');
+const precioUnidad = computed(() => esReservaPedido.value ? Number(form.precio_pedido || 0) : Number(vehiculo.value?.precio_usd || vehiculo.value?.precio || 0));
 const precioTotal = computed(() => precioUnidad.value * Number(form.cantidad || 0));
 const tipoCambio = computed(() => Number(form.tipo_cambio || 0));
 const montoBOB = computed(() => precioTotal.value * tipoCambio.value);
@@ -504,7 +580,7 @@ const saldo = computed(() => Math.max(precioTotal.value - montoInicial.value, 0)
 const montoFinanciado = computed(() => esCredito.value ? Math.max(precioTotal.value - montoInicialUSD.value, 0) : 0);
 const montoCuota = computed(() => Number(form.numero_cuotas || 0) > 0 ? montoFinanciado.value / Number(form.numero_cuotas || 1) : 0);
 const cantidadReservadaVigente = computed(() => {
-  const idVehiculo = Number(route.query.id || 0);
+  const idVehiculo = Number(vehiculo.value?.id || form.id_vehiculo || route.query.id || 0);
   return ventas.value
     .filter((venta: any) =>
       Number(venta.id_vehiculo || 0) === idVehiculo &&
@@ -514,8 +590,10 @@ const cantidadReservadaVigente = computed(() => {
     .reduce((total: number, venta: any) => total + Number(venta.cantidad || 0), 0);
 });
 const disponibilidadVenta = computed(() => {
+  if (esReservaPedido.value) return 1;
   return Math.max(Number(vehiculo.value?.cantidad_disponible || 0) - cantidadReservadaVigente.value, 0);
 });
+const etiquetaVehiculoPedido = computed(() => [form.pedido_marca, form.pedido_modelo, form.pedido_anio].filter(Boolean).join(' ') || 'Vehiculo a pedido');
 
 onMounted(async () => {
   await cargarDatos();
@@ -549,6 +627,23 @@ watch(() => form.tipo_venta, () => {
   }
 }, { immediate: true });
 
+watch(() => form.tipo_reserva, (tipo) => {
+  if (tipo === 'pedido') {
+    vehiculo.value = null;
+    form.id_vehiculo = null;
+    form.cantidad = 1;
+    form.estado_venta = 'Importando';
+    form.estado_entrega = 'Pendiente';
+  } else if (esReserva.value) {
+    form.estado_venta = 'Registrada';
+  }
+});
+
+watch(() => form.id_vehiculo, (id) => {
+  if (esReservaPedido.value) return;
+  vehiculo.value = vehiculos.value.find((item: any) => Number(item.id) === Number(id)) || vehiculo.value;
+});
+
 watch(precioTotal, () => {
   if (Number(form.monto_reserva || 0) > precioTotal.value) {
     form.monto_reserva = precioTotal.value;
@@ -567,6 +662,23 @@ async function cargarDatos() {
     const idVehiculo = route.query.id;
     if (!idVehiculo) {
       vehiculo.value = null;
+      const [resClientes, resVehiculos, resVentas] = await Promise.all([
+        $fetch(server.HOST + '/api/v1/clientes', { method: 'GET' }),
+        $fetch(server.HOST + '/api/v1/vehiculos', { method: 'GET' }),
+        $fetch(server.HOST + '/api/v1/ventas', { method: 'GET' })
+      ]);
+      vehiculos.value = Array.isArray(resVehiculos) ? resVehiculos.map((item: any) => ({
+        ...item,
+        nombreCompleto: etiquetaVehiculo(item)
+      })) : [];
+      ventas.value = Array.isArray(resVentas) ? resVentas : [];
+      const clientesActivos = Array.isArray(resClientes) ? resClientes.filter((cliente: any) => cliente.estado === 'Activo') : [];
+      clientes.value = clientesActivos.map((cliente: any) => ({
+        ...cliente,
+        nombreCompleto: `${cliente.nombre || ''} ${cliente.apellido || ''} - ${cliente.ci || 'Sin CI'}`.trim()
+      }));
+      form.tipo_venta = 'Reserva';
+      form.tipo_reserva = 'pedido';
       return;
     }
 
@@ -577,6 +689,11 @@ async function cargarDatos() {
     ]);
 
     vehiculo.value = resVehiculo;
+    form.id_vehiculo = Number(idVehiculo);
+    vehiculos.value = [{
+      ...resVehiculo,
+      nombreCompleto: etiquetaVehiculo(resVehiculo)
+    }];
     ventas.value = Array.isArray(resVentas) ? resVentas : [];
     const clientesActivos = Array.isArray(resClientes) ? resClientes.filter((cliente: any) => cliente.estado === 'Activo') : [];
     clientes.value = clientesActivos.map((cliente: any) => ({
@@ -595,15 +712,18 @@ async function cargarDatos() {
 }
 
 async function registrarVenta() {
-  if (!form.id_cliente || !vehiculo.value) {
+  if (!form.id_cliente || (!vehiculo.value && !esReservaPedido.value)) {
     toast.add({ severity: 'warn', summary: 'Seleccione cliente y vehiculo', life: 3000 });
     return;
   }
-  if (disponibilidadVenta.value <= 0) {
+  if (esReservaPedido.value && !validarReservaPedido()) {
+    return;
+  }
+  if (!esReservaPedido.value && disponibilidadVenta.value <= 0) {
     toast.add({ severity: 'warn', summary: 'Sin disponibilidad vendible', detail: 'El stock esta reservado por proformas vigentes.', life: 4000 });
     return;
   }
-  if (Number(form.cantidad || 0) > disponibilidadVenta.value) {
+  if (!esReservaPedido.value && Number(form.cantidad || 0) > disponibilidadVenta.value) {
     toast.add({ severity: 'warn', summary: 'Cantidad mayor a la disponible', detail: `Disponible para venta: ${disponibilidadVenta.value}`, life: 4000 });
     return;
   }
@@ -683,7 +803,7 @@ async function registrarVenta() {
 function construirVentaFormData(userId: number) {
   const formData = new FormData();
   formData.append('id_cliente', String(form.id_cliente || ''));
-  formData.append('id_vehiculo', String(Number(route.query.id)));
+  formData.append('id_vehiculo', esReservaPedido.value ? '' : String(Number(form.id_vehiculo || route.query.id)));
   formData.append('id_usuario', String(userId || 0));
   formData.append('fecha', form.fecha);
   formData.append('tipo_venta', form.tipo_venta);
@@ -693,7 +813,7 @@ function construirVentaFormData(userId: number) {
   formData.append('pago_bob', String(muestraDetallePago.value ? Number(pagoMixtoBOBDirecto.value || 0) : 0));
   formData.append('pagos', JSON.stringify(muestraDetallePago.value ? detallePagoPayload() : []));
   formData.append('validez_proforma_dias', String(Number(form.validez_proforma_dias || 15)));
-  formData.append('estado_venta', esReserva.value ? 'Registrada' : form.estado_venta);
+  formData.append('estado_venta', esReservaPedido.value ? 'Importando' : (esReserva.value ? 'Registrada' : form.estado_venta));
   formData.append('estado_pago', form.estado_pago);
   formData.append('metodo_pago', esCredito.value || esReserva.value ? resumenDetallePago() : form.metodo_pago);
   formData.append('estado_entrega', esReserva.value ? 'Pendiente' : form.estado_entrega);
@@ -708,11 +828,37 @@ function construirVentaFormData(userId: number) {
   formData.append('datos_garante', esCreditoDirecto.value ? form.datos_garante : '');
   formData.append('referencia_bancaria', esCreditoBancario.value ? form.referencia_bancaria : '');
   formData.append('estado_desembolso', esCreditoBancario.value ? form.estado_desembolso : '');
+  formData.append('tipo_reserva', esReserva.value ? form.tipo_reserva : 'stock');
+  formData.append('pedido_marca', esReservaPedido.value ? form.pedido_marca : '');
+  formData.append('pedido_modelo', esReservaPedido.value ? form.pedido_modelo : '');
+  formData.append('pedido_anio', esReservaPedido.value ? String(Number(form.pedido_anio || 0)) : '0');
+  formData.append('pedido_color', esReservaPedido.value ? form.pedido_color : '');
+  formData.append('pedido_version', esReservaPedido.value ? form.pedido_version : '');
+  formData.append('pedido_pais_origen', esReservaPedido.value ? form.pedido_pais_origen : '');
+  formData.append('pedido_proveedor', esReservaPedido.value ? form.pedido_proveedor : '');
+  formData.append('pedido_llegada_estimada', esReservaPedido.value ? form.pedido_llegada_estimada : '');
+  formData.append('precio_pedido', esReservaPedido.value ? String(Number(form.precio_pedido || 0)) : '0');
   formData.append('observacion', form.observacion);
   if (esCreditoDirecto.value && documentoGarantia.value) {
     formData.append('documento_garantia', documentoGarantia.value);
   }
   return formData;
+}
+
+function validarReservaPedido() {
+  if (!form.pedido_marca.trim() || !form.pedido_modelo.trim() || !form.pedido_pais_origen.trim()) {
+    toast.add({ severity: 'warn', summary: 'Complete marca, modelo y pais de origen', life: 3000 });
+    return false;
+  }
+  if (Number(form.pedido_anio || 0) < 1900) {
+    toast.add({ severity: 'warn', summary: 'Ingrese un anio valido', life: 3000 });
+    return false;
+  }
+  if (Number(form.precio_pedido || 0) <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingrese el precio pactado', life: 3000 });
+    return false;
+  }
+  return true;
 }
 
 function crearPago() {

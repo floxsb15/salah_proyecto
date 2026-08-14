@@ -1,0 +1,7 @@
+./builder.go
+./font.go
+./image.go
+./line.go
+./parseimage.go
+./provider.go
+./text.go

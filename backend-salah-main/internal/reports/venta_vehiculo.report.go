@@ -51,6 +51,9 @@ type VentaVehiculoReporte struct {
 	Categoria                string  `gorm:"column:categoria"`
 	Segmento                 string  `gorm:"column:segmento"`
 	Vendedor                 string  `gorm:"column:vendedor"`
+	TipoReserva              string  `gorm:"column:tipo_reserva"`
+	PedidoPaisOrigen         string  `gorm:"column:pedido_pais_origen"`
+	PedidoLlegadaEstimada    string  `gorm:"column:pedido_llegada_estimada"`
 }
 
 var QueryVentaVehiculoReporte = `
@@ -85,15 +88,22 @@ var QueryVentaVehiculoReporte = `
 		coalesce(vv.referencia_bancaria, '') as referencia_bancaria,
 		coalesce(vv.estado_desembolso, '') as estado_desembolso,
 		coalesce(vv.observacion, '') as observacion,
+		coalesce(vv.tipo_reserva, 'stock') as tipo_reserva,
+		coalesce(vv.pedido_pais_origen, '') as pedido_pais_origen,
+		coalesce(vv.pedido_llegada_estimada, '') as pedido_llegada_estimada,
 		concat_ws(' ', c.nombre, c.apellido) as cliente,
 		coalesce(c.ci, '') as ci_cliente,
-		coalesce(nullif(concat_ws(' ', nullif(trim(v.marca), ''), nullif(trim(v.modelo), ''), nullif(v.anio::text, '0')), ''), v.nombre) as vehiculo,
+		case
+			when coalesce(vv.tipo_reserva, 'stock') = 'pedido' then
+				coalesce(nullif(concat_ws(' ', nullif(trim(vv.pedido_marca), ''), nullif(trim(vv.pedido_modelo), ''), nullif(vv.pedido_anio::text, '0')), ''), 'Vehiculo a pedido')
+			else coalesce(nullif(concat_ws(' ', nullif(trim(v.marca), ''), nullif(trim(v.modelo), ''), nullif(v.anio::text, '0')), ''), v.nombre, 'Vehiculo')
+		end as vehiculo,
 		coalesce(cat.nombre, '') as categoria,
 		coalesce(seg.nombre, '') as segmento,
 		coalesce(concat_ws(' ', u.nombre, u.apellido), '') as vendedor
 	from ventas_vehiculos vv
 	inner join clientes c on c.id = vv.id_cliente
-	inner join vehiculos v on v.id = vv.id_vehiculo
+	left join vehiculos v on v.id = vv.id_vehiculo
 	left join categoria_vehiculo cat on cat.id = v.id_categoria
 	left join segmento_vehiculo seg on seg.id = v.id_segmento
 	left join usuarios u on u.id = vv.id_usuario
@@ -205,6 +215,10 @@ func makePDFVentaVehiculo(id string) (core.Maroto, VentaVehiculoReporte, error) 
 	addSectionTitle(m, "Cliente y vendedor")
 	addPairRow(m, "Cliente", venta.Cliente, "CI/NIT", emptyPDF(venta.CICliente))
 	addPairRow(m, "Vehiculo", venta.Vehiculo, "Categoria", emptyPDF(venta.Categoria))
+	if venta.TipoReserva == "pedido" {
+		addPairRow(m, "Tipo reserva", "A pedido", "Origen", emptyPDF(venta.PedidoPaisOrigen))
+		addSingleRow(m, "Llegada estimada", emptyPDF(venta.PedidoLlegadaEstimada))
+	}
 	addSingleRow(m, "Segmento", emptyPDF(venta.Segmento))
 
 	addSectionTitle(m, "Detalle economico")

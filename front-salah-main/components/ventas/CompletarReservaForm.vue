@@ -22,8 +22,20 @@
 
     <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-[24rem_1fr]">
       <section class="rounded-lg border border-gray-200 bg-white p-4">
-        <h3 class="text-lg font-semibold text-gray-900">{{ reserva.vehiculo }}</h3>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">{{ reserva.vehiculo }}</h3>
+            <p v-if="esReservaPedido" class="text-sm font-medium text-orange-600">Vehiculo a pedido / {{ reserva.estado_venta }}</p>
+          </div>
+          <Tag v-if="esReservaPedido" value="A pedido" severity="warning" />
+        </div>
         <p class="text-sm text-gray-500">{{ reserva.cliente }} · CI/NIT: {{ reserva.ci_cliente || 'N/A' }}</p>
+
+        <div v-if="esReservaPedido" class="mt-3 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-gray-700">
+          <p class="font-semibold text-gray-900">{{ vehiculoPedido }}</p>
+          <p v-if="reserva.pedido_version" class="text-xs text-gray-600">{{ reserva.pedido_version }}</p>
+          <p class="text-xs text-gray-600">{{ detallePedido }}</p>
+        </div>
 
         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
           <div class="rounded-md bg-gray-50 p-3">
@@ -47,6 +59,16 @@
 
       <section class="rounded-lg border border-gray-200 bg-white p-4">
         <form class="grid grid-cols-1 gap-4 lg:grid-cols-2" @submit.prevent @keydown.enter.prevent>
+          <section v-if="esReservaPedido && !reserva.id_vehiculo" class="grid grid-cols-1 gap-3 rounded-md border border-orange-200 bg-orange-50 p-3 lg:col-span-2 md:grid-cols-[1fr_auto]">
+            <div class="flex flex-col gap-1">
+              <label for="vehiculo_importado">Vehiculo importado en inventario</label>
+              <Select id="vehiculo_importado" v-model="form.id_vehiculo" :options="vehiculos" option-label="nombreCompleto" option-value="id" placeholder="Seleccione el vehiculo creado" filter fluid size="small" />
+            </div>
+            <div class="flex items-end">
+              <Button label="Crear vehiculo" icon="pi pi-car" severity="secondary" type="button" size="small" @click="vehiculoVisible = true" />
+            </div>
+          </section>
+
           <div class="flex flex-col gap-1">
             <label for="monto_pago">Pago restante</label>
             <InputNumber
@@ -84,16 +106,25 @@
 
           <div class="flex justify-end gap-2 border-t border-gray-100 pt-4 lg:col-span-2">
             <Button label="Cancelar" severity="secondary" type="button" @click="router.push(historialPath)" />
-            <Button label="Completar pago" icon="pi pi-check" type="button" :loading="saving" @click="completarReserva" />
+            <Button label="Completar pago" icon="pi pi-check" type="button" :loading="saving" :disabled="requiereVehiculoImportado" @click="completarReserva" />
           </div>
         </form>
       </section>
     </div>
+
+    <modalAgregarVehiculo
+      v-if="vehiculoVisible"
+      :open="vehiculoVisible"
+      @close="vehiculoVisible = false"
+      @update="obtenerVehiculos"
+      @success="toast.add({ severity: 'success', summary: 'Vehiculo agregado', life: 3000 })"
+      @error="mostrarError('Error al agregar vehiculo', $event)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { server } from '~/server/server';
 import Button from 'primevue/button';
@@ -101,9 +132,11 @@ import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
+import Tag from 'primevue/tag';
 import Textarea from 'primevue/textarea';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
+import modalAgregarVehiculo from '~/components/admin/vehiculos/modalAgregarProducto.vue';
 
 const props = withDefaults(defineProps<{
   historialPath?: string;
@@ -116,8 +149,10 @@ const router = useRouter();
 const toast = useToast();
 const { descargarPDFVenta } = useVentaPdf();
 const reserva = ref<any>(null);
+const vehiculos = ref<any[]>([]);
 const loading = ref(true);
 const saving = ref(false);
+const vehiculoVisible = ref(false);
 const metodosPago = ref(['QR', 'Transferencia', 'Efectivo']);
 const estadosEntrega = ref(['Pendiente', 'Entregado']);
 const form = reactive({
@@ -125,7 +160,21 @@ const form = reactive({
   metodo_pago: 'Efectivo',
   estado_entrega: 'Pendiente',
   fecha_entrega: '',
+  id_vehiculo: null as number | null,
   observacion: ''
+});
+
+const esReservaPedido = computed(() => reserva.value?.tipo_reserva === 'pedido');
+const requiereVehiculoImportado = computed(() => esReservaPedido.value && !reserva.value?.id_vehiculo && !form.id_vehiculo);
+const vehiculoPedido = computed(() => [reserva.value?.pedido_marca, reserva.value?.pedido_modelo, reserva.value?.pedido_anio].filter(Boolean).join(' ') || reserva.value?.vehiculo || 'Vehiculo a pedido');
+const detallePedido = computed(() => {
+  if (!reserva.value) return '';
+  return [
+    reserva.value.pedido_color ? `Color: ${reserva.value.pedido_color}` : '',
+    reserva.value.pedido_pais_origen ? `Origen: ${reserva.value.pedido_pais_origen}` : '',
+    reserva.value.pedido_llegada_estimada ? `Llegada: ${reserva.value.pedido_llegada_estimada}` : '',
+    reserva.value.pedido_proveedor ? `Proveedor: ${reserva.value.pedido_proveedor}` : ''
+  ].filter(Boolean).join(' / ');
 });
 
 onMounted(async () => {
@@ -148,6 +197,10 @@ async function cargarReserva() {
     reserva.value = res;
     form.monto_pago = Number(res.saldo || 0);
     form.metodo_pago = res.metodo_pago || 'Efectivo';
+    form.id_vehiculo = res.id_vehiculo || null;
+    if (res.tipo_reserva === 'pedido' && !res.id_vehiculo) {
+      await obtenerVehiculos();
+    }
   } catch (err) {
     console.error(err);
     toast.add({ severity: 'error', summary: 'Error al cargar reserva', life: 3000 });
@@ -158,6 +211,10 @@ async function cargarReserva() {
 
 async function completarReserva() {
   if (!reserva.value) return;
+  if (requiereVehiculoImportado.value) {
+    toast.add({ severity: 'warn', summary: 'Registre o seleccione el vehiculo importado', life: 4000 });
+    return;
+  }
   const saldo = Number(reserva.value.saldo || 0);
   if (Number(form.monto_pago || 0) !== saldo) {
     toast.add({ severity: 'warn', summary: 'Debe pagar el saldo completo', detail: `Saldo pendiente: $ ${formatPrecio(saldo)}`, life: 4000 });
@@ -177,6 +234,7 @@ async function completarReserva() {
       body: {
         monto_pago: Number(form.monto_pago || 0),
         id_usuario_pago: Number(userId || 0),
+        id_vehiculo: form.id_vehiculo,
         metodo_pago: form.metodo_pago,
         estado_entrega: form.estado_entrega,
         fecha_entrega: form.fecha_entrega,
@@ -192,6 +250,27 @@ async function completarReserva() {
   } finally {
     saving.value = false;
   }
+}
+
+async function obtenerVehiculos() {
+  try {
+    const res = await $fetch(server.HOST + '/api/v1/vehiculos', { method: 'GET' });
+    vehiculos.value = Array.isArray(res) ? res.map((vehiculo: any) => ({
+      ...vehiculo,
+      nombreCompleto: etiquetaVehiculo(vehiculo)
+    })) : [];
+  } catch (err) {
+    console.error(err);
+    toast.add({ severity: 'error', summary: 'Error al cargar vehiculos', life: 3000 });
+  }
+}
+
+function etiquetaVehiculo(vehiculo: any) {
+  return [vehiculo.marca, vehiculo.modelo, vehiculo.anio].filter(Boolean).join(' ') || vehiculo.nombre || 'Vehiculo';
+}
+
+function mostrarError(summary: string, err: any) {
+  toast.add({ severity: 'error', summary, detail: err?.data || err?.message, life: 4000 });
 }
 
 function formatPrecio(precio: number) {

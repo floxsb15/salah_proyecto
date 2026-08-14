@@ -11,7 +11,7 @@
       <Button label="Actualizar" icon="pi pi-refresh" size="small" :loading="loading" @click="cargarDashboard" />
     </div>
 
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       <div class="rounded-lg border border-gray-200 bg-white p-4">
         <div class="flex items-center justify-between gap-3">
           <div>
@@ -42,15 +42,6 @@
         </div>
       </div>
 
-      <div class="rounded-lg border border-gray-200 bg-white p-4">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-sm text-gray-500">Margen potencial</p>
-            <p class="text-2xl font-bold text-gray-900">$ {{ formatPrecio(margenInventario) }}</p>
-          </div>
-          <i class="pi pi-car text-2xl text-red-600"></i>
-        </div>
-      </div>
     </div>
 
     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -228,10 +219,6 @@ const tipoCambioPromedio = computed(() => {
   if (ventasConTipoCambio.value.length === 0) return 0;
   return ventasConTipoCambio.value.reduce((total, venta) => total + Number(venta.tipo_cambio_usado || 0), 0) / ventasConTipoCambio.value.length;
 });
-const margenInventario = computed(() => vehiculos.value.reduce((total, vehiculo) => {
-  const margenUnidad = Number(vehiculo.margen_ganancia ?? (Number(vehiculo.precio || 0) - Number(vehiculo.precio_compra || 0)));
-  return total + (margenUnidad * Number(vehiculo.cantidad_disponible || 0));
-}, 0));
 const clientesActivos = computed(() => clientes.value.filter(cliente => cliente.estado === 'Activo').length);
 const vehiculosActivos = computed(() => vehiculos.value.filter(vehiculo => vehiculo.estado === 'Activo').length);
 

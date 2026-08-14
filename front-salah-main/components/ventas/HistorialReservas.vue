@@ -63,7 +63,21 @@
           </div>
         </template>
       </Column>
-      <Column field="vehiculo" header="Vehiculo" sortable />
+      <Column field="tipo_reserva" header="Tipo" sortable>
+        <template #body="slotProps">
+          <Tag :value="tipoReservaLabel(slotProps.data)" :severity="tipoReservaSeverity(slotProps.data)" />
+        </template>
+      </Column>
+      <Column field="vehiculo" header="Vehiculo" sortable>
+        <template #body="slotProps">
+          <div>
+            <p class="font-medium text-gray-900">{{ vehiculoReserva(slotProps.data) }}</p>
+            <p v-if="slotProps.data.tipo_reserva === 'pedido'" class="text-xs text-gray-500">
+              {{ detallePedido(slotProps.data) }}
+            </p>
+          </div>
+        </template>
+      </Column>
       <Column field="estado_venta" header="Estado" sortable>
         <template #body="slotProps">
           <Tag :value="slotProps.data.estado_venta" :severity="severityReserva(slotProps.data)" />
@@ -163,6 +177,12 @@ const filteredReservas = computed(() => {
     (venta.cliente?.toLowerCase() || '').includes(query) ||
     (venta.ci_cliente?.toLowerCase() || '').includes(query) ||
     (venta.vehiculo?.toLowerCase() || '').includes(query) ||
+    (venta.tipo_reserva?.toLowerCase() || '').includes(query) ||
+    (venta.pedido_marca?.toLowerCase() || '').includes(query) ||
+    (venta.pedido_modelo?.toLowerCase() || '').includes(query) ||
+    (venta.pedido_color?.toLowerCase() || '').includes(query) ||
+    (venta.pedido_pais_origen?.toLowerCase() || '').includes(query) ||
+    (venta.pedido_proveedor?.toLowerCase() || '').includes(query) ||
     (venta.usuario_pago_reserva?.toLowerCase() || '').includes(query) ||
     (venta.estado_venta?.toLowerCase() || '').includes(query)
   );
@@ -215,7 +235,32 @@ function formatHora(fechaHora: string) {
 function severityReserva(venta: any) {
   if (venta.estado_venta === 'Completada') return 'success';
   if (venta.estado_venta === 'Anulada' || venta.proforma_vencida) return 'danger';
+  if (venta.estado_venta === 'Importando') return 'info';
   return 'warning';
+}
+
+function tipoReservaLabel(venta: any) {
+  return venta.tipo_reserva === 'pedido' ? 'A pedido' : 'Stock';
+}
+
+function tipoReservaSeverity(venta: any) {
+  return venta.tipo_reserva === 'pedido' ? 'warning' : 'info';
+}
+
+function vehiculoReserva(venta: any) {
+  if (venta.tipo_reserva !== 'pedido') {
+    return venta.vehiculo || 'Vehiculo';
+  }
+  return [venta.pedido_marca, venta.pedido_modelo, venta.pedido_anio].filter(Boolean).join(' ') || venta.vehiculo || 'Vehiculo a pedido';
+}
+
+function detallePedido(venta: any) {
+  const partes = [
+    venta.pedido_color ? `Color: ${venta.pedido_color}` : '',
+    venta.pedido_pais_origen ? `Origen: ${venta.pedido_pais_origen}` : '',
+    venta.pedido_llegada_estimada ? `Llegada: ${venta.pedido_llegada_estimada}` : ''
+  ].filter(Boolean);
+  return partes.join(' / ') || venta.pedido_version || 'Importacion pendiente';
 }
 
 async function descargarVenta(idVenta: number) {
