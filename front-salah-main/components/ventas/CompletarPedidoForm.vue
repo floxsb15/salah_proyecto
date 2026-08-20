@@ -47,6 +47,11 @@
 
       <section class="rounded-lg border border-gray-200 bg-white p-4">
         <form class="grid grid-cols-1 gap-4 lg:grid-cols-2" @submit.prevent="completarPedido">
+          <div class="flex flex-col gap-1 lg:col-span-2">
+            <label for="tipo_pago">Tipo de pago</label>
+            <Select id="tipo_pago" v-model="form.tipo_pago" :options="tiposPago" fluid size="small" />
+          </div>
+
           <div class="flex flex-col gap-1">
             <label for="tipo_cambio">Tipo de cambio del dia</label>
             <InputNumber id="tipo_cambio" v-model="form.tipo_cambio" :min="0" :minFractionDigits="2" :maxFractionDigits="4" suffix=" Bs/USD" fluid size="small" />
@@ -59,7 +64,7 @@
             </div>
           </div>
 
-          <section class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
+          <section v-if="esContado" class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <h3 class="text-sm font-semibold text-gray-900">Detalle de pago final</h3>
@@ -77,6 +82,77 @@
 
             <p v-if="pagoExcedeSaldo" class="text-sm font-semibold text-red-600">El pago supera el saldo pendiente.</p>
           </section>
+
+          <template v-else>
+            <div class="flex flex-col gap-1">
+              <label for="tipo_credito">Tipo de credito</label>
+              <Select id="tipo_credito" v-model="form.tipo_credito" :options="tiposCredito" option-label="label" option-value="value" fluid size="small" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="numero_cuotas">Numero de cuotas</label>
+              <InputNumber id="numero_cuotas" v-model="form.numero_cuotas" :min="1" :useGrouping="false" fluid size="small" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="fecha_inicio_credito">Fecha inicio pagos</label>
+              <InputText id="fecha_inicio_credito" v-model="form.fecha_inicio_credito" type="date" fluid size="small" />
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label for="frecuencia_pago">Frecuencia</label>
+              <Select id="frecuencia_pago" v-model="form.frecuencia_pago" :options="frecuenciasPago" fluid size="small" />
+            </div>
+
+            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Monto financiado</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(saldoFinalUSD) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Monto por cuota</span>
+                <strong class="block text-gray-900">$ {{ formatPrecio(montoCuotaCredito) }}</strong>
+              </div>
+              <div>
+                <span class="text-xs font-semibold uppercase text-gray-500">Saldo Bs</span>
+                <strong class="block text-gray-900">Bs {{ formatPrecio(saldoFinalBOB) }}</strong>
+              </div>
+            </div>
+
+            <template v-if="esCreditoBancario">
+              <div class="flex flex-col gap-1">
+                <label for="referencia_bancaria">Referencia bancaria</label>
+                <InputText id="referencia_bancaria" v-model="form.referencia_bancaria" placeholder="Texto libre" fluid size="small" />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label for="estado_desembolso">Estado desembolso</label>
+                <Select id="estado_desembolso" v-model="form.estado_desembolso" :options="estadosDesembolso" fluid size="small" />
+              </div>
+            </template>
+
+            <template v-if="esCreditoDirecto">
+              <div class="flex items-center gap-2">
+                <Checkbox id="tiene_respaldo" v-model="form.tiene_respaldo" binary />
+                <label for="tiene_respaldo">Cliente con respaldo/garantia</label>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label for="tipo_garantia">Tipo de garantia</label>
+                <InputText id="tipo_garantia" v-model="form.tipo_garantia" placeholder="Ej. garante, inmueble, vehiculo" fluid size="small" />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-2">
+                <label for="documento_garantia">Documento garantia</label>
+                <InputText id="documento_garantia" v-model="form.documento_garantia" placeholder="Referencia o descripcion del documento" fluid size="small" />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-2">
+                <label for="datos_garante">Datos del garante/respaldo</label>
+                <Textarea id="datos_garante" v-model="form.datos_garante" rows="3" auto-resize fluid />
+              </div>
+            </template>
+          </template>
 
           <div class="flex flex-col gap-1 lg:col-span-2">
             <label for="observacion">Observacion</label>
@@ -98,7 +174,9 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { server } from '~/server/server';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import InputNumber from 'primevue/inputnumber';
+import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
 import Skeleton from 'primevue/skeleton';
 import Textarea from 'primevue/textarea';
@@ -117,9 +195,29 @@ const loading = ref(true);
 const saving = ref(false);
 const monedasPago = ref(['USD', 'BOB']);
 const metodosPago = ref(['Efectivo', 'QR', 'Transferencia', 'Tarjeta']);
+const tiposPago = ref(['Contado', 'Credito']);
+const tiposCredito = ref([
+  { label: 'Credito directo', value: 'credito_directo' },
+  { label: 'Credito bancario', value: 'credito_bancario' }
+]);
+const frecuenciasPago = ref(['mensual', 'quincenal', 'semanal']);
+const estadosDesembolso = ref(['Pendiente', 'Aprobado', 'Desembolsado']);
 const form = reactive({
+  tipo_pago: 'Contado',
   tipo_cambio: null as number | null,
   pagos: [crearPago()],
+  tipo_credito: 'credito_directo',
+  numero_cuotas: 12,
+  fecha_inicio_credito: new Date().toISOString().slice(0, 10),
+  frecuencia_pago: 'mensual',
+  tiene_respaldo: false,
+  tipo_garantia: '',
+  documento_garantia: '',
+  datos_garante: '',
+  referencia_bancaria: '',
+  estado_desembolso: 'Pendiente',
+  estado_entrega: 'Pendiente',
+  fecha_entrega: '',
   observacion: ''
 });
 
@@ -136,6 +234,11 @@ const pagoBOBDirecto = computed(() => form.pagos.filter((pago: any) => pago.mone
 const pagoEquivalenteUSD = computed(() => roundMoney(pagoUSDDirecto.value + (tipoCambio.value > 0 ? pagoBOBDirecto.value / tipoCambio.value : 0)));
 const pagoEquivalenteBOB = computed(() => roundMoney(pagoEquivalenteUSD.value * tipoCambio.value));
 const pagoExcedeSaldo = computed(() => pagoEquivalenteUSD.value > saldoFinalUSD.value);
+const esContado = computed(() => form.tipo_pago === 'Contado');
+const esCredito = computed(() => form.tipo_pago === 'Credito');
+const esCreditoDirecto = computed(() => esCredito.value && form.tipo_credito === 'credito_directo');
+const esCreditoBancario = computed(() => esCredito.value && form.tipo_credito === 'credito_bancario');
+const montoCuotaCredito = computed(() => Number(form.numero_cuotas || 0) > 0 ? roundMoney(saldoFinalUSD.value / Number(form.numero_cuotas || 1)) : 0);
 
 onMounted(async () => {
   await cargarPedido();
@@ -169,12 +272,16 @@ async function completarPedido() {
     toast.add({ severity: 'warn', summary: 'Ingrese tipo de cambio', life: 3000 });
     return;
   }
-  if (pagoEquivalenteUSD.value !== saldoFinalUSD.value) {
-    toast.add({ severity: 'warn', summary: 'Debe pagar el saldo completo', detail: `$ ${formatPrecio(saldoFinalUSD.value)}`, life: 4000 });
-    return;
-  }
-  if (form.pagos.some((pago: any) => !pago.moneda || !pago.metodo || Number(pago.monto || 0) <= 0)) {
-    toast.add({ severity: 'warn', summary: 'Complete moneda, tipo de pago y monto en cada fila', life: 4000 });
+  if (esContado.value) {
+    if (pagoEquivalenteUSD.value !== saldoFinalUSD.value) {
+      toast.add({ severity: 'warn', summary: 'Debe pagar el saldo completo', detail: `$ ${formatPrecio(saldoFinalUSD.value)}`, life: 4000 });
+      return;
+    }
+    if (form.pagos.some((pago: any) => !pago.moneda || !pago.metodo || Number(pago.monto || 0) <= 0)) {
+      toast.add({ severity: 'warn', summary: 'Complete moneda, tipo de pago y monto en cada fila', life: 4000 });
+      return;
+    }
+  } else if (!validarCredito()) {
     return;
   }
   saving.value = true;
@@ -183,11 +290,24 @@ async function completarPedido() {
       method: 'PATCH',
       body: {
         tipo_cambio: tipoCambio.value,
-        pagos: form.pagos.map((pago: any) => ({
+        tipo_pago: form.tipo_pago.toLowerCase(),
+        pagos: esContado.value ? form.pagos.map((pago: any) => ({
           moneda: pago.moneda,
           metodo: pago.metodo,
           monto: Number(pago.monto || 0)
-        })),
+        })) : [],
+        tipo_credito: form.tipo_credito,
+        numero_cuotas: Number(form.numero_cuotas || 0),
+        fecha_inicio_credito: form.fecha_inicio_credito,
+        frecuencia_pago: form.frecuencia_pago,
+        tiene_respaldo: form.tiene_respaldo,
+        tipo_garantia: form.tipo_garantia,
+        documento_garantia: form.documento_garantia,
+        datos_garante: form.datos_garante,
+        referencia_bancaria: form.referencia_bancaria,
+        estado_desembolso: form.estado_desembolso,
+        estado_entrega: form.estado_entrega,
+        fecha_entrega: form.fecha_entrega,
         observacion: form.observacion
       }
     });
@@ -199,6 +319,26 @@ async function completarPedido() {
   } finally {
     saving.value = false;
   }
+}
+
+function validarCredito() {
+  if (!form.tipo_credito) {
+    toast.add({ severity: 'warn', summary: 'Seleccione tipo de credito', life: 3000 });
+    return false;
+  }
+  if (Number(form.numero_cuotas || 0) <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingrese el numero de cuotas', life: 3000 });
+    return false;
+  }
+  if (!form.fecha_inicio_credito) {
+    toast.add({ severity: 'warn', summary: 'Ingrese fecha de inicio de credito', life: 3000 });
+    return false;
+  }
+  if (esCreditoDirecto.value && (!form.tiene_respaldo || !form.tipo_garantia.trim() || !form.datos_garante.trim())) {
+    toast.add({ severity: 'warn', summary: 'Credito directo incompleto', detail: 'Debe registrar respaldo, tipo de garantia y datos del garante.', life: 4000 });
+    return false;
+  }
+  return true;
 }
 
 function crearPago() {

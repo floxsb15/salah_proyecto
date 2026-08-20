@@ -41,6 +41,8 @@ type VentaVehiculo struct {
 	EstadoDesembolso         string     `gorm:"column:estado_desembolso;size:60" json:"estado_desembolso"`
 	Observacion              string     `gorm:"column:observacion" json:"observacion"`
 	IDUsuarioPagoReserva     *uint      `gorm:"column:id_usuario_pago_reserva" json:"id_usuario_pago_reserva"`
+	OrigenTipo               string     `gorm:"column:origen_tipo;size:20;not null;default:venta;index" json:"origen_tipo"`
+	OrigenID                 *uint      `gorm:"column:origen_id;index" json:"origen_id"`
 	TipoReserva              string     `gorm:"column:tipo_reserva;size:20;not null;default:stock" json:"tipo_reserva"`
 	PedidoMarca              string     `gorm:"column:pedido_marca;size:120" json:"pedido_marca"`
 	PedidoModelo             string     `gorm:"column:pedido_modelo;size:120" json:"pedido_modelo"`

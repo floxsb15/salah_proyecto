@@ -53,6 +53,7 @@ func InitEndPoints(router *mux.Router) {
 	protected(v1, "/cuotas-credito/{id}/pagar", c.PagarCuotaCredito, http.MethodPatch, roleAdmin, roleManager)
 
 	protected(v1, "/pedidos/{id}/recibir", c.RecibirPedidoVehiculo, http.MethodPatch, roleAdmin, roleManager)
+	protected(v1, "/pedidos/{id}/aduana", c.MarcarPedidoVehiculoEnTransito, http.MethodPatch, roleAdmin, roleManager)
 	protected(v1, "/pedidos/{id}/transito", c.MarcarPedidoVehiculoEnTransito, http.MethodPatch, roleAdmin, roleManager)
 	protected(v1, "/pedidos/{id}/completar", c.CompletarPedidoVehiculo, http.MethodPatch, roleAdmin, roleManager)
 	protected(v1, "/pedidos/{id}", c.ObtenerPedidoVehiculo, http.MethodGet, staffRoles...)

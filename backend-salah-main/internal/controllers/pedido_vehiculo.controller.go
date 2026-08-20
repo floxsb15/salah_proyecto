@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gorm.io/gorm"
 )
 
 const (
 	estadoPedidoRegistrado = "Pedido registrado"
-	estadoPedidoTransito   = "En tránsito"
+	estadoPedidoTransito   = "En aduana"
 	estadoPedidoRecibido   = "Recibido"
 	estadoPedidoCompletado = "Completado"
 )
@@ -81,9 +82,22 @@ type RecibirPedidoVehiculoDAO struct {
 }
 
 type CompletarPedidoVehiculoDAO struct {
-	TipoCambio  float64        `json:"tipo_cambio"`
-	Pagos       []PagoVentaDAO `json:"pagos"`
-	Observacion string         `json:"observacion"`
+	TipoPago           string         `json:"tipo_pago"`
+	TipoCambio         float64        `json:"tipo_cambio"`
+	Pagos              []PagoVentaDAO `json:"pagos"`
+	Observacion        string         `json:"observacion"`
+	TipoCredito        string         `json:"tipo_credito"`
+	NumeroCuotas       uint           `json:"numero_cuotas"`
+	FechaInicioCredito string         `json:"fecha_inicio_credito"`
+	FrecuenciaPago     string         `json:"frecuencia_pago"`
+	TieneRespaldo      bool           `json:"tiene_respaldo"`
+	TipoGarantia       string         `json:"tipo_garantia"`
+	DocumentoGarantia  string         `json:"documento_garantia"`
+	DatosGarante       string         `json:"datos_garante"`
+	ReferenciaBancaria string         `json:"referencia_bancaria"`
+	EstadoDesembolso   string         `json:"estado_desembolso"`
+	EstadoEntrega      string         `json:"estado_entrega"`
+	FechaEntrega       string         `json:"fecha_entrega"`
 }
 
 func ObtenerPedidosVehiculos(w http.ResponseWriter, r *http.Request) {
@@ -202,8 +216,16 @@ func RecibirPedidoVehiculo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Pedido no encontrado", http.StatusNotFound)
 		return
 	}
-	if pedido.Estado == estadoPedidoCompletado {
-		http.Error(w, "El pedido ya fue completado", http.StatusBadRequest)
+	if !estadoPedidoPermiteRecepcion(pedido.Estado) {
+		http.Error(w, "Solo los pedidos en aduana pueden recibirse", http.StatusBadRequest)
+		return
+	}
+	if pedido.IDVehiculo != nil {
+		http.Error(w, "El pedido ya tiene un vehiculo vinculado", http.StatusBadRequest)
+		return
+	}
+	if vehiculo.PedidoOrigenID != nil && *vehiculo.PedidoOrigenID != pedido.ID {
+		http.Error(w, "El vehiculo pertenece a otro pedido", http.StatusBadRequest)
 		return
 	}
 
@@ -214,10 +236,21 @@ func RecibirPedidoVehiculo(w http.ResponseWriter, r *http.Request) {
 	pedido.IDUsuarioRecibe = &principal.ID
 	pedido.Observacion = appendObservacion(pedido.Observacion, payload.Observacion)
 
-	if err := db.GDB.Save(&pedido).Error; err != nil {
+	vehiculo.PedidoOrigenID = &pedido.ID
+	vehiculo.Estado = false
+
+	tx := db.GDB.Begin()
+	if err := tx.Save(&vehiculo).Error; err != nil {
+		tx.Rollback()
+		http.Error(w, "Error al actualizar vehiculo", http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Save(&pedido).Error; err != nil {
+		tx.Rollback()
 		http.Error(w, "Error al recibir pedido", http.StatusInternalServerError)
 		return
 	}
+	tx.Commit()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(&pedido)
@@ -237,12 +270,12 @@ func MarcarPedidoVehiculoEnTransito(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if pedido.Estado != estadoPedidoRegistrado {
-		http.Error(w, "Solo los pedidos registrados pueden pasar a transito", http.StatusBadRequest)
+		http.Error(w, "Solo los pedidos registrados pueden pasar a aduana", http.StatusBadRequest)
 		return
 	}
 
 	pedido.Estado = estadoPedidoTransito
-	pedido.Observacion = appendObservacion(pedido.Observacion, "Marcado en transito por usuario "+strconv.Itoa(int(principal.ID)))
+	pedido.Observacion = appendObservacion(pedido.Observacion, "Marcado en aduana por usuario "+strconv.Itoa(int(principal.ID)))
 	if err := db.GDB.Save(&pedido).Error; err != nil {
 		http.Error(w, "Error al actualizar estado del pedido", http.StatusInternalServerError)
 		return
@@ -283,32 +316,44 @@ func CompletarPedidoVehiculo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pagosNormalizados, _, _, pagadoUSD, err := normalizarPagosVenta(payload.Pagos, roundMoney(payload.TipoCambio))
-	if err != nil {
-		tx.Rollback()
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	tipoPago := strings.ToLower(strings.TrimSpace(payload.TipoPago))
+	if tipoPago == "" {
+		tipoPago = "contado"
 	}
-	if pagadoUSD != roundMoney(pedido.SaldoPendienteUSD) {
-		tx.Rollback()
-		http.Error(w, "El pago final debe completar el saldo pendiente", http.StatusBadRequest)
-		return
-	}
+	if tipoPago == "credito" || tipoPago == "crédito" {
+		if err := completarPedidoConCredito(tx, pedido, payload, principal.ID); err != nil {
+			tx.Rollback()
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		pagosNormalizados, _, _, pagadoUSD, err := normalizarPagosVenta(payload.Pagos, roundMoney(payload.TipoCambio))
+		if err != nil {
+			tx.Rollback()
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if pagadoUSD != roundMoney(pedido.SaldoPendienteUSD) {
+			tx.Rollback()
+			http.Error(w, "El pago final debe completar el saldo pendiente", http.StatusBadRequest)
+			return
+		}
 
-	pagos := make([]models.PagoPedidoVehiculo, 0, len(pagosNormalizados))
-	for _, pago := range pagosNormalizados {
-		pagos = append(pagos, models.PagoPedidoVehiculo{
-			PedidoID: pedido.ID,
-			Etapa:    "final",
-			Moneda:   pago.Moneda,
-			Metodo:   pago.Metodo,
-			Monto:    roundMoney(pago.Monto),
-		})
-	}
-	if err := tx.Create(&pagos).Error; err != nil {
-		tx.Rollback()
-		http.Error(w, "Error al registrar pago final", http.StatusInternalServerError)
-		return
+		pagos := make([]models.PagoPedidoVehiculo, 0, len(pagosNormalizados))
+		for _, pago := range pagosNormalizados {
+			pagos = append(pagos, models.PagoPedidoVehiculo{
+				PedidoID: pedido.ID,
+				Etapa:    "final",
+				Moneda:   pago.Moneda,
+				Metodo:   pago.Metodo,
+				Monto:    roundMoney(pago.Monto),
+			})
+		}
+		if err := tx.Create(&pagos).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al registrar pago final", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	now := time.Now()
@@ -317,6 +362,13 @@ func CompletarPedidoVehiculo(w http.ResponseWriter, r *http.Request) {
 	pedido.FechaCompletado = &now
 	pedido.IDUsuarioCompleta = &principal.ID
 	pedido.Observacion = appendObservacion(pedido.Observacion, payload.Observacion)
+	if pedido.IDVehiculo != nil {
+		if err := tx.Model(&models.Vehiculo{}).Where("id = ?", *pedido.IDVehiculo).Update("estado", true).Error; err != nil {
+			tx.Rollback()
+			http.Error(w, "Error al habilitar vehiculo", http.StatusInternalServerError)
+			return
+		}
+	}
 	if err := tx.Save(&pedido).Error; err != nil {
 		tx.Rollback()
 		http.Error(w, "Error al completar pedido", http.StatusInternalServerError)
@@ -368,8 +420,8 @@ func construirPedidoVehiculo(payload PedidoVehiculoDAO, userID uint) (models.Ped
 	if err != nil {
 		return models.PedidoVehiculo{}, nil, err
 	}
-	if pagadoUSD > adelantoRequerido {
-		return models.PedidoVehiculo{}, nil, errors.New("Pago mayor al adelanto requerido")
+	if pagadoUSD < adelantoRequerido {
+		return models.PedidoVehiculo{}, nil, errors.New("El pago debe ser igual o mayor al adelanto requerido")
 	}
 
 	validez := payload.ValidezDias
@@ -392,6 +444,11 @@ func construirPedidoVehiculo(payload PedidoVehiculoDAO, userID uint) (models.Ped
 		})
 	}
 
+	estadoPedido := estadoPedidoRegistrado
+	if roundMoney(payload.PrecioEstimadoUSD-pagadoUSD) <= 0 {
+		estadoPedido = estadoPedidoCompletado
+	}
+
 	return models.PedidoVehiculo{
 		IDCliente:            payload.IDCliente,
 		IDProveedor:          idProveedor,
@@ -411,7 +468,7 @@ func construirPedidoVehiculo(payload PedidoVehiculoDAO, userID uint) (models.Ped
 		AdelantoPagadoUSD:    totalUSD,
 		AdelantoPagadoBOB:    totalBOB,
 		SaldoPendienteUSD:    roundMoney(payload.PrecioEstimadoUSD - pagadoUSD),
-		Estado:               estadoPedidoRegistrado,
+		Estado:               estadoPedido,
 		FechaVencimiento:     fecha.AddDate(0, 0, int(validez)),
 		Observacion:          strings.TrimSpace(payload.Observacion),
 	}, pagos, nil
@@ -428,6 +485,116 @@ func puedeAccederPedido(r *http.Request, id interface{}) bool {
 	}
 	var count int64
 	return query.Count(&count).Error == nil && count == 1
+}
+
+func estadoPedidoPermiteRecepcion(estado string) bool {
+	normalizado := strings.ToLower(strings.TrimSpace(estado))
+	return normalizado == strings.ToLower(estadoPedidoTransito) ||
+		normalizado == "en transito" ||
+		normalizado == "en tránsito"
+}
+
+func completarPedidoConCredito(tx *gorm.DB, pedido models.PedidoVehiculo, payload CompletarPedidoVehiculoDAO, userID uint) error {
+	tipoCredito, err := normalizarTipoVenta(payload.TipoCredito)
+	if err != nil {
+		return err
+	}
+	if tipoCredito != tipoVentaCreditoDirecto && tipoCredito != tipoVentaCreditoBancario {
+		return errors.New("Tipo de credito requerido")
+	}
+	tipoCambio := roundMoney(payload.TipoCambio)
+	if tipoCambio <= 0 {
+		return errors.New("Tipo de cambio requerido")
+	}
+	fechaInicio, err := time.Parse("2006-01-02", payload.FechaInicioCredito)
+	if err != nil {
+		return errors.New("Fecha de inicio de credito requerida")
+	}
+	frecuencia, err := normalizarFrecuenciaPago(payload.FrecuenciaPago)
+	if err != nil {
+		return err
+	}
+	if payload.NumeroCuotas == 0 {
+		return errors.New("Numero de cuotas requerido")
+	}
+	if tipoCredito == tipoVentaCreditoDirecto && (!payload.TieneRespaldo || strings.TrimSpace(payload.TipoGarantia) == "" || strings.TrimSpace(payload.DatosGarante) == "") {
+		return errors.New("Credito directo requiere respaldo, tipo de garantia y datos del garante")
+	}
+	if pedido.IDVehiculo == nil {
+		return errors.New("Debe vincular el vehiculo recibido")
+	}
+
+	now := time.Now()
+	saldo := roundMoney(pedido.SaldoPendienteUSD)
+	montoCuota := roundMoney(saldo / float64(payload.NumeroCuotas))
+	idVehiculo := *pedido.IDVehiculo
+	venta := models.VentaVehiculo{
+		IDCliente:                pedido.IDCliente,
+		IDVehiculo:               &idVehiculo,
+		IDUsuario:                &userID,
+		Fecha:                    now,
+		FechaVenta:               now,
+		TipoVenta:                tipoCredito,
+		Cantidad:                 1,
+		PrecioUnidad:             saldo,
+		PrecioTotal:              saldo,
+		PrecioUSD:                saldo,
+		TipoCambioUsado:          tipoCambio,
+		MontoBOBCalculado:        roundMoney(saldo * tipoCambio),
+		SaldoBOB:                 roundMoney(saldo * tipoCambio),
+		CuotaInicial:             0,
+		Saldo:                    saldo,
+		MontoFinanciado:          saldo,
+		NumeroCuotas:             payload.NumeroCuotas,
+		MontoCuota:               montoCuota,
+		FechaInicioCredito:       &fechaInicio,
+		FrecuenciaPago:           frecuencia,
+		TieneRespaldo:            payload.TieneRespaldo,
+		TipoGarantia:             strings.TrimSpace(payload.TipoGarantia),
+		DocumentoGarantia:        strings.TrimSpace(payload.DocumentoGarantia),
+		DatosGarante:             strings.TrimSpace(payload.DatosGarante),
+		ValidezProformaDias:      15,
+		FechaVencimientoProforma: now.AddDate(0, 0, 15),
+		EstadoVenta:              estadoVentaEnCredito,
+		EstadoPago:               "Pendiente",
+		MetodoPago:               "Credito",
+		EstadoEntrega:            strings.TrimSpace(payload.EstadoEntrega),
+		ReferenciaBancaria:       strings.TrimSpace(payload.ReferenciaBancaria),
+		EstadoDesembolso:         strings.TrimSpace(payload.EstadoDesembolso),
+		Observacion:              strings.TrimSpace(payload.Observacion),
+		OrigenTipo:               "pedido",
+		OrigenID:                 &pedido.ID,
+		TipoReserva:              "pedido",
+		PedidoMarca:              strings.TrimSpace(pedido.Marca),
+		PedidoModelo:             strings.TrimSpace(pedido.Modelo),
+		PedidoAnio:               pedido.Anio,
+		PedidoColor:              strings.TrimSpace(pedido.Color),
+		PedidoVersion:            strings.TrimSpace(pedido.Version),
+		PedidoPaisOrigen:         strings.TrimSpace(pedido.PaisOrigen),
+		PedidoLlegadaEstimada:    pedido.FechaLlegadaEstimada.Format("2006-01-02"),
+	}
+	if venta.EstadoEntrega == "" {
+		venta.EstadoEntrega = "Pendiente"
+	}
+	if strings.TrimSpace(payload.FechaEntrega) != "" {
+		fechaEntrega, err := time.Parse("2006-01-02", payload.FechaEntrega)
+		if err != nil {
+			return errors.New("Fecha de entrega no valida")
+		}
+		venta.FechaEntrega = &fechaEntrega
+	}
+
+	if err := tx.Create(&venta).Error; err != nil {
+		return errors.New("Error al registrar credito del pedido")
+	}
+	cuotas := generarCuotasCredito(venta)
+	if err := tx.Create(&cuotas).Error; err != nil {
+		return errors.New("Error al generar cuotas de credito")
+	}
+	if err := descontarCantidadVehiculo(tx, idVehiculo, 1); err != nil {
+		return err
+	}
+	return nil
 }
 
 func appendObservacion(actual string, nueva string) string {

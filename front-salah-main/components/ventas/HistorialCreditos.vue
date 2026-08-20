@@ -11,6 +11,7 @@
       <div class="flex flex-col gap-2 md:flex-row md:items-center">
         <SelectButton v-model="tipoFiltro" :options="tipoFiltros" option-label="label" option-value="value" size="small" />
         <SelectButton v-model="estadoFiltro" :options="estadoFiltros" option-label="label" option-value="value" size="small" />
+        <SelectButton v-model="origenFiltro" :options="origenFiltros" option-label="label" option-value="value" size="small" />
         <span class="p-input-icon-left">
           <i class="pi pi-search" />
           <InputText v-model="searchQuery" placeholder="Buscar credito..." size="small" />
@@ -74,14 +75,23 @@
       <Column field="vehiculo" header="Vehiculo" sortable>
         <template #body="slotProps">
           <div>
-            <p class="font-medium text-gray-900">{{ slotProps.data.vehiculo }}</p>
+            <div class="flex items-center gap-2">
+              <p class="font-medium text-gray-900">{{ slotProps.data.vehiculo }}</p>
+              <Tag v-if="esCreditoPedido(slotProps.data)" value="Pedido" severity="warning" />
+            </div>
             <p class="text-xs text-gray-500">{{ slotProps.data.categoria || 'Sin categoria' }}</p>
+            <p v-if="esCreditoPedido(slotProps.data)" class="text-xs text-orange-600">Credito originado desde pedido</p>
           </div>
         </template>
       </Column>
       <Column field="tipo_venta" header="Tipo" sortable>
         <template #body="slotProps">
           <Tag :value="labelTipoCredito(slotProps.data.tipo_venta)" severity="info" />
+        </template>
+      </Column>
+      <Column field="origen_tipo" header="Origen" sortable>
+        <template #body="slotProps">
+          <Tag :value="labelOrigenCredito(slotProps.data)" :severity="severityOrigen(slotProps.data)" />
         </template>
       </Column>
       <Column field="estado_venta" header="Estado" sortable>
@@ -141,10 +151,11 @@
           <div class="rounded-lg border border-gray-200 p-3">
             <p class="text-xs uppercase text-gray-500">Vehiculo</p>
             <p class="font-semibold text-gray-900">{{ creditoSeleccionado.vehiculo }}</p>
+            <Tag v-if="esCreditoPedido(creditoSeleccionado)" value="Pedido" severity="warning" />
           </div>
           <div class="rounded-lg border border-gray-200 p-3">
-            <p class="text-xs uppercase text-gray-500">Saldo</p>
-            <p class="font-semibold text-gray-900">$ {{ formatPrecio(creditoSeleccionado.saldo) }}</p>
+            <p class="text-xs uppercase text-gray-500">Saldo restante por pagar</p>
+            <p class="font-semibold text-gray-900">$ {{ formatPrecio(saldoRestanteCredito) }}</p>
           </div>
           <div class="rounded-lg border border-gray-200 p-3">
             <p class="text-xs uppercase text-gray-500">Progreso</p>
@@ -210,7 +221,16 @@
           </div>
           <div class="rounded-lg border border-gray-200 p-3">
             <p class="text-xs uppercase text-gray-500">Monto USD</p>
-            <p class="font-semibold text-gray-900">$ {{ formatPrecio(cuotaPago.monto) }}</p>
+            <InputNumber
+              v-model="montoPagoUSD"
+              mode="decimal"
+              :min="0"
+              :minFractionDigits="2"
+              :maxFractionDigits="2"
+              fluid
+              size="small"
+            />
+            <p class="mt-1 text-xs text-gray-500">Minimo: $ {{ formatPrecio(cuotaPago.monto) }}</p>
           </div>
         </div>
 
@@ -274,10 +294,12 @@ const loading = ref(true);
 const loadingCuotas = ref(false);
 const pagandoCuotaId = ref<number | null>(null);
 const cuotaPago = ref<any | null>(null);
+const montoPagoUSD = ref<number | null>(null);
 const tipoCambioPago = ref<number | null>(null);
 const searchQuery = ref('');
 const tipoFiltro = ref('todos');
 const estadoFiltro = ref('todos');
+const origenFiltro = ref('todos');
 
 const mostrarVendedor = computed(() => props.scope === 'general');
 const descripcion = computed(() => mostrarVendedor.value
@@ -298,11 +320,20 @@ const estadoFiltros = [
   { label: 'Pagados', value: 'pagados' }
 ];
 
+const origenFiltros = [
+  { label: 'Origen: Todos', value: 'todos' },
+  { label: 'Venta', value: 'venta' },
+  { label: 'Reserva', value: 'reserva' },
+  { label: 'Pedido', value: 'pedido' }
+];
+
 const filteredCreditos = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
 
   return creditos.value.filter((credito: any) => {
+    const origen = origenCredito(credito);
     const coincideTipo = tipoFiltro.value === 'todos' || credito.tipo_venta === tipoFiltro.value;
+    const coincideOrigen = origenFiltro.value === 'todos' || origen === origenFiltro.value;
     const coincideEstado =
       estadoFiltro.value === 'todos' ||
       (estadoFiltro.value === 'activos' && credito.estado_venta === 'en_credito') ||
@@ -318,9 +349,10 @@ const filteredCreditos = computed(() => {
       (credito.vehiculo?.toLowerCase() || '').includes(query) ||
       (credito.categoria?.toLowerCase() || '').includes(query) ||
       (credito.tipo_venta?.toLowerCase() || '').includes(query) ||
+      labelOrigenCredito(credito).toLowerCase().includes(query) ||
       (credito.estado_venta?.toLowerCase() || '').includes(query);
 
-    return coincideTipo && coincideEstado && coincideBusqueda;
+    return coincideTipo && coincideOrigen && coincideEstado && coincideBusqueda;
   });
 });
 
@@ -337,7 +369,21 @@ const totalCuotasAtrasadas = computed(() => {
 });
 
 const montoPagoBOB = computed(() => {
-  return Number(cuotaPago.value?.monto || 0) * Number(tipoCambioPago.value || 0);
+  return Number(montoPagoUSD.value || 0) * Number(tipoCambioPago.value || 0);
+});
+
+const saldoRestanteCredito = computed(() => {
+  if (!creditoSeleccionado.value) {
+    return 0;
+  }
+
+  if (cuotasDetalle.value.length === 0) {
+    return Number(creditoSeleccionado.value.saldo || 0);
+  }
+
+  return cuotasDetalle.value
+    .filter((cuota: any) => cuota.estado !== 'pagada')
+    .reduce((total: number, cuota: any) => total + Number(cuota.monto || 0), 0);
 });
 
 onMounted(async () => {
@@ -430,6 +476,7 @@ async function abrirDetalle(credito: any) {
 
 function abrirPagoCuota(cuota: any) {
   cuotaPago.value = cuota;
+  montoPagoUSD.value = Number(cuota.monto || 0);
   tipoCambioPago.value = null;
   pagoVisible.value = true;
 }
@@ -437,11 +484,18 @@ function abrirPagoCuota(cuota: any) {
 function cerrarPagoCuota() {
   pagoVisible.value = false;
   cuotaPago.value = null;
+  montoPagoUSD.value = null;
   tipoCambioPago.value = null;
 }
 
 async function pagarCuota() {
   if (!cuotaPago.value) return;
+  const montoMinimo = Number(cuotaPago.value.monto || 0);
+  const montoIngresado = Number(montoPagoUSD.value || 0);
+  if (montoIngresado < montoMinimo) {
+    toast.add({ severity: 'error', summary: 'Monto invalido', detail: `El pago minimo es $ ${formatPrecio(montoMinimo)}`, life: 4000 });
+    return;
+  }
   if (!tipoCambioPago.value || Number(tipoCambioPago.value) <= 0) {
     toast.add({ severity: 'warn', summary: 'Ingrese el precio del dolar actual', life: 3000 });
     return;
@@ -457,6 +511,7 @@ async function pagarCuota() {
     await $fetch(server.HOST + `/api/v1/cuotas-credito/${cuotaPago.value.id}/pagar`, {
       method: 'PATCH',
       body: {
+        monto_pago_usd: montoIngresado,
         tipo_cambio_pago: Number(tipoCambioPago.value || 0),
         id_usuario_pago: userId
       }
@@ -599,6 +654,38 @@ function labelTipoCredito(tipo: string) {
   if (tipo === 'credito_directo') return 'Credito directo';
   if (tipo === 'credito_bancario') return 'Credito bancario';
   return tipo || 'Credito';
+}
+
+function esCreditoPedido(credito: any) {
+  return origenCredito(credito) === 'pedido';
+}
+
+function origenCredito(credito: any) {
+  const origen = String(credito?.origen_tipo || '').trim().toLowerCase();
+  if (['venta', 'reserva', 'pedido'].includes(origen)) {
+    return origen;
+  }
+  if (credito?.tipo_reserva === 'pedido' || Boolean(credito?.pedido_marca || credito?.pedido_modelo)) {
+    return 'pedido';
+  }
+  if (credito?.tipo_venta === 'Reserva') {
+    return 'reserva';
+  }
+  return 'venta';
+}
+
+function labelOrigenCredito(credito: any) {
+  const origen = origenCredito(credito);
+  if (origen === 'pedido') return 'Pedido';
+  if (origen === 'reserva') return 'Reserva';
+  return 'Venta';
+}
+
+function severityOrigen(credito: any) {
+  const origen = origenCredito(credito);
+  if (origen === 'pedido') return 'warning';
+  if (origen === 'reserva') return 'secondary';
+  return 'success';
 }
 
 function labelEstadoCredito(estado: string) {

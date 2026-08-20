@@ -26,6 +26,7 @@ type Vehiculo struct {
 	Asientos           *uint   `gorm:"column:asientos" json:"asientos,omitempty"`
 	Garantia           string  `gorm:"column:garantia" json:"garantia"`
 	Equipamiento       string  `gorm:"column:equipamiento" json:"equipamiento"`
+	PedidoOrigenID     *uint   `gorm:"column:pedido_origen_id;index" json:"pedido_origen_id,omitempty"`
 
 	Categoria CategoriaVehiculo `gorm:"foreignKey:IDCategoria;reference:ID" json:"-"`
 	Segmento  SegmentoVehiculo  `gorm:"foreignKey:IDSegmento;reference:ID" json:"-"`

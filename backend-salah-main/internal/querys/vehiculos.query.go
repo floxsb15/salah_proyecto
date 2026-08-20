@@ -7,9 +7,10 @@ var Vehiculos = `
 		(p.precio - coalesce(p.precio_compra, 0)) as margen_ganancia,
 		coalesce(p.cantidad_disponible, 1) as cantidad_disponible, p.imagen, p.id_categoria, p.id_segmento,
 		p.marca, p.modelo, p.anio, p.version, p.tipo_techo, p.combustible, p.traccion, p.transmision,
-		p.asientos, p.garantia, p.equipamiento,
-		case when p.estado
-		then 'Activo'
+		p.asientos, p.garantia, p.equipamiento, p.pedido_origen_id,
+		case
+		when p.estado then 'Activo'
+		when p.pedido_origen_id is not null then 'No disponible'
 		else 'Inactivo'
 		end as estado, cp.nombre as categoria, sv.nombre as segmento
 	from vehiculos p 
@@ -24,9 +25,10 @@ var Vehiculo = `
 		(p.precio - coalesce(p.precio_compra, 0)) as margen_ganancia,
 		coalesce(p.cantidad_disponible, 1) as cantidad_disponible, p.imagen, p.id_categoria, p.id_segmento,
 		p.marca, p.modelo, p.anio, p.version, p.tipo_techo, p.combustible, p.traccion, p.transmision,
-		p.asientos, p.garantia, p.equipamiento,
-		case when p.estado
-		then 'Activo'
+		p.asientos, p.garantia, p.equipamiento, p.pedido_origen_id,
+		case
+		when p.estado then 'Activo'
+		when p.pedido_origen_id is not null then 'No disponible'
 		else 'Inactivo'
 		end as estado, cp.nombre as categoria, sv.nombre as segmento
 	from vehiculos p 

@@ -45,6 +45,9 @@
             <Message v-if="$form.marca?.invalid" severity="error" size="small" variant="simple">
               {{ $form.marca.error?.message }}
             </Message>
+            <Message v-if="marcaNoCatalogada" severity="warn" size="small" variant="simple">
+              La marca debe existir activa en categorias de vehiculos.
+            </Message>
           </div>
 
           <div class="flex flex-col gap-1">
@@ -70,6 +73,9 @@
             />
             <Message v-if="$form.anio?.invalid" severity="error" size="small" variant="simple">
               {{ $form.anio.error?.message }}
+            </Message>
+            <Message v-if="anioNoCatalogado" severity="warn" size="small" variant="simple">
+              El anio debe existir activo en categorias de vehiculos.
             </Message>
           </div>
 
@@ -154,6 +160,7 @@
               placeholder="Seleccione un estado"
               fluid
               size="small"
+              :disabled="Boolean(props.forcedEstado)"
             />
             <Message v-if="$form.estado?.invalid" severity="error" size="small" variant="simple">
               {{ $form.estado.error?.message }}
@@ -191,6 +198,9 @@
             <small class="text-center text-xs text-gray-500">Puede subir de 1 a 5 fotos.</small>
             <Message v-if="$form.fotos?.invalid" severity="error" size="small" variant="simple">
               {{ $form.fotos.error?.message }}
+            </Message>
+            <Message v-if="props.pedidoOrigenId" severity="info" size="small" variant="simple">
+              Las fotos son opcionales al recibir un pedido. Puede agregarlas editando el vehiculo.
             </Message>
           </div>
         </div>
@@ -253,7 +263,7 @@
       <div class="flex justify-end gap-2 border-t border-gray-100 pt-3">
         <Button v-if="pasoActual === 2" type="button" label="Atras" severity="secondary" @click="pasoActual = 1" />
         <Button v-if="pasoActual === 1" type="button" label="Siguiente" icon="pi pi-arrow-right" icon-pos="right" @click="pasoActual = 2" />
-        <Button v-else type="submit" label="Agregar" icon="pi pi-check" />
+        <Button v-else type="submit" :label="props.submitLabel || 'Agregar'" icon="pi pi-check" />
       </div>
     </Form>
   </Dialog>
@@ -264,13 +274,29 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import { z } from 'zod';
 import { server } from '~/server/server';
 
-interface Props { open : boolean }
+interface VehiculoInitialValues {
+  precio?: number
+  cantidad_disponible?: number
+  marca?: string
+  modelo?: string
+  anio?: number
+  version?: string
+  estado?: string
+}
+
+interface Props {
+  open : boolean
+  initialData?: VehiculoInitialValues
+  forcedEstado?: string
+  pedidoOrigenId?: number | null
+  submitLabel?: string
+}
 const props = defineProps<Props>()
-const emit = defineEmits(['close', 'success', 'update', 'error'])
+const emit = defineEmits(['close', 'success', 'update', 'error', 'created'])
 const visible = ref(props.open)
 
 const pasoActual = ref(1)
-const Estados = ref(['Activo', 'Inactivo'])
+const Estados = ref(['Activo', 'Inactivo', 'No disponible'])
 const TiposTecho = ref(['Techo rigido', 'Techo solar', 'Techo panoramico', 'Otro'])
 const Combustibles = ref(['Gasolina', 'Diesel', 'GNV', 'GLP', 'Hibrido', 'Electrico'])
 const Tracciones = ref(['4x2', '4x4', 'AWD', 'FWD', 'RWD'])
@@ -281,12 +307,12 @@ const garantiaAnios = ref<number | null>(null)
 const garantiaKm = ref<number | null>(null)
 
 const initialValues = reactive({
-  precio: 0,
-  cantidad_disponible: 1,
-  marca: '',
-  modelo: '',
-  anio: 0,
-  version: '',
+  precio: props.initialData?.precio || 0,
+  cantidad_disponible: props.initialData?.cantidad_disponible || 1,
+  marca: props.initialData?.marca || '',
+  modelo: props.initialData?.modelo || '',
+  anio: props.initialData?.anio || 0,
+  version: props.initialData?.version || '',
   tipo_techo: '',
   combustible: '',
   traccion: '',
@@ -296,7 +322,7 @@ const initialValues = reactive({
   equipamiento: '',
   id_categoria: 0,
   id_segmento: null as number | null,
-  estado: '',
+  estado: props.forcedEstado || props.initialData?.estado || '',
   fotos: [] as File[]
 })
 
@@ -309,6 +335,9 @@ const SegmentosFiltrados = computed(() => {
 })
 const MarcasActivas = computed(() => Marcas.value.filter(marca => marca.estado === 'Activo'))
 const AniosActivos = computed(() => Anios.value.filter(anio => anio.estado === 'Activo'))
+const requiereFotos = computed(() => !props.pedidoOrigenId)
+const marcaNoCatalogada = computed(() => Boolean(initialValues.marca) && Marcas.value.length > 0 && !MarcasActivas.value.some((marca: any) => marca.nombre === initialValues.marca))
+const anioNoCatalogado = computed(() => Boolean(initialValues.anio) && Anios.value.length > 0 && !AniosActivos.value.some((anio: any) => Number(anio.valor) === Number(initialValues.anio)))
 
 onMounted( async () => {
   const [ resCategorias, resSegmentos, resMarcas, resAnios ] = await Promise.all([
@@ -339,6 +368,17 @@ watch(() => props.open, (newValue) => {
   visible.value = newValue
 })
 
+watch(() => props.initialData, (newValue) => {
+  if (!newValue) return
+  initialValues.precio = newValue.precio || 0
+  initialValues.cantidad_disponible = newValue.cantidad_disponible || 1
+  initialValues.marca = newValue.marca || ''
+  initialValues.modelo = newValue.modelo || ''
+  initialValues.anio = newValue.anio || 0
+  initialValues.version = newValue.version || ''
+  initialValues.estado = props.forcedEstado || newValue.estado || initialValues.estado
+}, { deep: true })
+
 watch(visible, (newValue) => {
   if (!newValue) {
     emit('close')
@@ -353,7 +393,7 @@ const resolver = ref(zodResolver(
     marca: z.string().min(1, { message: 'Marca requerida.' }),
     anio: z.number().min(1900, { message: 'Anio requerido.' }),
     id_categoria: z.number().min(1, { message: 'Categoria requerida.' }),
-    estado: z.enum(['Activo', 'Inactivo'], { message: 'Estado requerido.' }),
+    estado: z.enum(['Activo', 'Inactivo', 'No disponible'], { message: 'Estado requerido.' }),
     fotos: z.array(
       z.instanceof(File, { message: 'Debe seleccionar imagenes.' })
         .refine((file) => file.type.startsWith('image/'), {
@@ -362,13 +402,20 @@ const resolver = ref(zodResolver(
         .refine((file) => file.size <= 2 * 1024 * 1024, {
           message: 'Cada imagen no debe superar los 2MB.',
         })
-    ).min(1, { message: 'Debe seleccionar al menos una imagen.' })
+    ).refine((files) => !requiereFotos.value || files.length > 0, {
+      message: 'Debe seleccionar al menos una imagen.',
+    })
       .max(5, { message: 'Solo se permiten hasta 5 fotos.' })
   })
 ))
 
 async function onFormSubmit({ valid } : any ) {
   if( valid ){
+    if (marcaNoCatalogada.value || anioNoCatalogado.value) {
+      pasoActual.value = 1
+      emit('error', new Error('Marca o anio no existen activos en categorias de vehiculos'))
+      return
+    }
     const formData = new FormData()
     try{
       formData.append("marca", initialValues.marca)
@@ -386,15 +433,26 @@ async function onFormSubmit({ valid } : any ) {
       formData.append("cantidad_disponible", String(initialValues.cantidad_disponible))
       formData.append("id_categoria", String(initialValues.id_categoria))
       formData.append("id_segmento", initialValues.id_segmento ? String(initialValues.id_segmento) : "")
-      formData.append("estado", initialValues.estado)
+      formData.append("estado", props.forcedEstado || initialValues.estado)
+      if (props.pedidoOrigenId) {
+        formData.append("pedido_origen_id", String(props.pedidoOrigenId))
+      }
       initialValues.fotos.forEach((foto) => {
         formData.append("fotos", foto)
       })
 
-      await $fetch(server.HOST + '/api/v1/vehiculos', {
+      const csrfToken = readCookie('csrf_token')
+      const response = await fetch(server.HOST + '/api/v1/vehiculos', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'same-origin',
+        headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined
       })
+      if (!response.ok) {
+        throw new Error((await response.text()).trim() || 'Error al agregar vehiculo')
+      }
+      const nuevoVehiculo = await response.json()
+      emit('created', nuevoVehiculo)
       emit('update'), emit('success')
       visible.value = false
     } catch(err) {
@@ -435,6 +493,12 @@ function obtenerGarantia() {
     partes.push(`${garantiaKm.value} km`)
   }
   return partes.join(' o ')
+}
+
+function readCookie(name: string) {
+  const prefix = `${encodeURIComponent(name)}=`
+  const entry = document.cookie.split('; ').find((value) => value.startsWith(prefix))
+  return entry ? decodeURIComponent(entry.slice(prefix.length)) : ''
 }
 
 </script>

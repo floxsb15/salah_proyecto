@@ -111,7 +111,7 @@
               label="Completar"
               icon="pi pi-check"
               size="small"
-              :disabled="slotProps.data.estado_venta === 'Completada' || slotProps.data.estado_venta === 'Anulada'"
+              :disabled="slotProps.data.estado_venta === 'Completada' || slotProps.data.estado_venta === 'Anulada' || Number(slotProps.data.saldo || 0) <= 0"
               @click="router.push({ path: completarPath, query: { id: slotProps.data.id } })"
             />
             <Button icon="pi pi-file-pdf" size="small" severity="danger" text rounded aria-label="Descargar PDF" @click="descargarVenta(slotProps.data.id)" />

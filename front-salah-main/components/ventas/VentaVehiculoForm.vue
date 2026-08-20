@@ -231,7 +231,23 @@
             </div>
           </template>
 
-          <template v-if="esCredito">
+          <CreditoFormFields
+            v-if="esCredito"
+            :form="form"
+            :monto-financiado="montoFinanciado"
+            :monto-cuota="montoCuota"
+            :saldo="saldo"
+            :pago-detalle-u-s-d="pagoDetalleUSD"
+            :pago-detalle-b-o-b="pagoMixtoBOBDirecto"
+            :saldo-detalle-u-s-d="saldoDetalleUSD"
+            :saldo-detalle-b-o-b="saldoDetalleBOB"
+            :pago-excede-total="pagoMixtoExcedeTotal"
+            :documento-garantia-nombre="documentoGarantiaNombre"
+            @documento-select="onDocumentoGarantiaSelect"
+            @documento-clear="limpiarDocumentoGarantia"
+          />
+
+          <template v-if="false && esCredito">
             <div class="flex flex-col gap-1">
               <label for="numero_cuotas">Numero de cuotas</label>
               <InputNumber id="numero_cuotas" v-model="form.numero_cuotas" :min="1" :useGrouping="false" fluid size="small" />
@@ -298,17 +314,17 @@
             </div>
           </template>
 
-          <div class="flex flex-col gap-1">
+          <div v-if="!esCredito" class="flex flex-col gap-1">
             <label for="estado_entrega">Estado de entrega</label>
             <Select id="estado_entrega" v-model="form.estado_entrega" :options="estadosEntrega" :disabled="esReserva" fluid size="small" />
           </div>
 
-          <div class="flex flex-col gap-1">
+          <div v-if="!esCredito" class="flex flex-col gap-1">
             <label for="fecha_entrega">Fecha de entrega</label>
             <InputText id="fecha_entrega" v-model="form.fecha_entrega" type="date" fluid size="small" />
           </div>
 
-          <template v-if="esCreditoBancario">
+          <template v-if="false && esCreditoBancario">
             <div class="flex flex-col gap-1">
               <label for="referencia_bancaria">Referencia bancaria</label>
               <InputText id="referencia_bancaria" v-model="form.referencia_bancaria" placeholder="Texto libre" fluid size="small" />
@@ -320,7 +336,7 @@
             </div>
           </template>
 
-          <template v-if="esCreditoDirecto">
+          <template v-if="false && esCreditoDirecto">
             <div class="flex items-center gap-2">
               <Checkbox id="tiene_respaldo" v-model="form.tiene_respaldo" binary />
               <label for="tiene_respaldo">Cliente con respaldo/garantia</label>

@@ -12,7 +12,7 @@
       <div class="w-full md:w-1/2 p-8 flex flex-col justify-center">
         <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
 
-        <form method="post" action="/api/v1/login" @submit.prevent="iniciarSesion" class="flex flex-col gap-4">
+        <form @submit.prevent="iniciarSesion" class="flex flex-col gap-4">
 
           <!-- Username Input -->
           <div class="flex flex-col gap-1">
@@ -114,8 +114,7 @@ async function iniciarSesion() {
   try {
     const response:any = await $fetch(server.HOST + '/api/v1/login', {
       method: 'POST',
-      body: JSON.stringify(initialValues),
-      headers: { 'Content-Type': 'application/json' }
+      body: result.data,
     });
 
 

@@ -69,31 +69,78 @@
             </div>
           </section>
 
-          <div class="flex flex-col gap-1">
-            <label for="monto_pago">Pago restante</label>
-            <InputNumber
-              id="monto_pago"
-              v-model="form.monto_pago"
-              mode="currency"
-              currency="USD"
-              locale="es-BO"
-              :min="0"
-              :max="Number(reserva.saldo || 0)"
-              fluid
-              size="small"
-            />
+          <div class="flex flex-col gap-1 lg:col-span-2">
+            <label for="tipo_pago">Tipo de pago</label>
+            <Select id="tipo_pago" v-model="form.tipo_pago" :options="tiposPago" fluid size="small" />
           </div>
 
           <div class="flex flex-col gap-1">
-            <label for="metodo_pago">Metodo de pago</label>
-            <Select id="metodo_pago" v-model="form.metodo_pago" :options="metodosPago" fluid size="small" />
+            <label for="tipo_cambio">Tipo de cambio del dia</label>
+            <InputNumber id="tipo_cambio" v-model="form.tipo_cambio" :min="0" :minFractionDigits="2" :maxFractionDigits="4" suffix=" Bs/USD" fluid size="small" />
           </div>
+          <div class="flex flex-col gap-1">
+            <label>Saldo restante</label>
+            <div class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+              <strong>$ {{ formatPrecio(saldoRestanteUSD) }}</strong>
+              <span class="ml-2 text-gray-500">Bs {{ formatPrecio(saldoRestanteBOB) }}</span>
+            </div>
+          </div>
+
+          <section v-if="esContado" class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900">Detalle de pago</h3>
+                <p class="text-xs text-gray-500">Pagado: $ {{ formatPrecio(pagoEquivalenteUSD) }} / Bs {{ formatPrecio(pagoEquivalenteBOB) }}</p>
+              </div>
+              <Button label="Agregar pago" icon="pi pi-plus" size="small" severity="secondary" type="button" @click="agregarPago" />
+            </div>
+            <div v-for="(pago, index) in form.pagos" :key="pago.key" class="grid grid-cols-1 gap-2 md:grid-cols-[9rem_13rem_1fr_2.5rem]">
+              <Select v-model="pago.moneda" :options="monedasPago" placeholder="Moneda" fluid size="small" />
+              <Select v-model="pago.metodo" :options="metodosPago" placeholder="Tipo de pago" fluid size="small" />
+              <InputNumber v-model="pago.monto" mode="decimal" :min="0" :minFractionDigits="2" :maxFractionDigits="2" placeholder="Monto" fluid size="small" />
+              <Button icon="pi pi-trash" severity="danger" text rounded type="button" aria-label="Eliminar pago" @click="eliminarPago(index)" />
+            </div>
+            <p v-if="pagoExcedeSaldo" class="text-sm font-semibold text-red-600">El pago supera el saldo pendiente.</p>
+          </section>
+
+          <template v-else>
+            <div class="flex flex-col gap-1">
+              <label for="tipo_credito">Tipo de credito</label>
+              <Select id="tipo_credito" v-model="form.tipo_credito" :options="tiposCredito" option-label="label" option-value="value" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="numero_cuotas">Numero de cuotas</label>
+              <InputNumber id="numero_cuotas" v-model="form.numero_cuotas" :min="1" :useGrouping="false" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="fecha_inicio_credito">Fecha inicio pagos</label>
+              <InputText id="fecha_inicio_credito" v-model="form.fecha_inicio_credito" type="date" fluid size="small" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label for="frecuencia_pago">Frecuencia</label>
+              <Select id="frecuencia_pago" v-model="form.frecuencia_pago" :options="frecuenciasPago" fluid size="small" />
+            </div>
+            <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-3">
+              <div><span class="text-xs font-semibold uppercase text-gray-500">Monto financiado</span><strong class="block text-gray-900">$ {{ formatPrecio(saldoRestanteUSD) }}</strong></div>
+              <div><span class="text-xs font-semibold uppercase text-gray-500">Monto por cuota</span><strong class="block text-gray-900">$ {{ formatPrecio(montoCuotaCredito) }}</strong></div>
+              <div><span class="text-xs font-semibold uppercase text-gray-500">Saldo Bs</span><strong class="block text-gray-900">Bs {{ formatPrecio(saldoRestanteBOB) }}</strong></div>
+            </div>
+            <template v-if="esCreditoBancario">
+              <div class="flex flex-col gap-1"><label for="referencia_bancaria">Referencia bancaria</label><InputText id="referencia_bancaria" v-model="form.referencia_bancaria" placeholder="Texto libre" fluid size="small" /></div>
+              <div class="flex flex-col gap-1"><label for="estado_desembolso">Estado desembolso</label><Select id="estado_desembolso" v-model="form.estado_desembolso" :options="estadosDesembolso" fluid size="small" /></div>
+            </template>
+            <template v-if="esCreditoDirecto">
+              <div class="flex items-center gap-2"><Checkbox id="tiene_respaldo" v-model="form.tiene_respaldo" binary /><label for="tiene_respaldo">Cliente con respaldo/garantia</label></div>
+              <div class="flex flex-col gap-1"><label for="tipo_garantia">Tipo de garantia</label><InputText id="tipo_garantia" v-model="form.tipo_garantia" placeholder="Ej. garante, inmueble, vehiculo" fluid size="small" /></div>
+              <div class="flex flex-col gap-1 lg:col-span-2"><label for="documento_garantia">Documento garantia</label><InputText id="documento_garantia" v-model="form.documento_garantia" placeholder="Referencia o descripcion" fluid size="small" /></div>
+              <div class="flex flex-col gap-1 lg:col-span-2"><label for="datos_garante">Datos del garante/respaldo</label><Textarea id="datos_garante" v-model="form.datos_garante" rows="3" auto-resize fluid /></div>
+            </template>
+          </template>
 
           <div class="flex flex-col gap-1">
             <label for="estado_entrega">Estado de entrega</label>
             <Select id="estado_entrega" v-model="form.estado_entrega" :options="estadosEntrega" fluid size="small" />
           </div>
-
           <div class="flex flex-col gap-1">
             <label for="fecha_entrega">Fecha de entrega</label>
             <InputText id="fecha_entrega" v-model="form.fecha_entrega" type="date" fluid size="small" />
@@ -128,6 +175,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { server } from '~/server/server';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import InputNumber from 'primevue/inputnumber';
 import InputText from 'primevue/inputtext';
 import Select from 'primevue/select';
@@ -153,15 +201,36 @@ const vehiculos = ref<any[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const vehiculoVisible = ref(false);
+const monedasPago = ref(['USD', 'BOB']);
 const metodosPago = ref(['QR', 'Transferencia', 'Efectivo']);
 const estadosEntrega = ref(['Pendiente', 'Entregado']);
+const tiposPago = ref(['Contado', 'Credito']);
+const tiposCredito = ref([
+  { label: 'Credito directo', value: 'credito_directo' },
+  { label: 'Credito bancario', value: 'credito_bancario' }
+]);
+const frecuenciasPago = ref(['mensual', 'quincenal', 'semanal']);
+const estadosDesembolso = ref(['Pendiente', 'Aprobado', 'Desembolsado']);
 const form = reactive({
+  tipo_pago: 'Contado',
+  tipo_cambio: null as number | null,
+  pagos: [crearPago()],
   monto_pago: 0,
   metodo_pago: 'Efectivo',
   estado_entrega: 'Pendiente',
   fecha_entrega: '',
   id_vehiculo: null as number | null,
-  observacion: ''
+  observacion: '',
+  tipo_credito: 'credito_directo',
+  numero_cuotas: 12,
+  fecha_inicio_credito: new Date().toISOString().slice(0, 10),
+  frecuencia_pago: 'mensual',
+  tiene_respaldo: false,
+  tipo_garantia: '',
+  documento_garantia: '',
+  datos_garante: '',
+  referencia_bancaria: '',
+  estado_desembolso: 'Pendiente'
 });
 
 const esReservaPedido = computed(() => reserva.value?.tipo_reserva === 'pedido');
@@ -176,6 +245,18 @@ const detallePedido = computed(() => {
     reserva.value.pedido_proveedor ? `Proveedor: ${reserva.value.pedido_proveedor}` : ''
   ].filter(Boolean).join(' / ');
 });
+const saldoRestanteUSD = computed(() => Number(reserva.value?.saldo || 0));
+const tipoCambio = computed(() => Number(form.tipo_cambio || 0));
+const saldoRestanteBOB = computed(() => roundMoney(saldoRestanteUSD.value * tipoCambio.value));
+const pagoUSDDirecto = computed(() => form.pagos.filter((pago: any) => pago.moneda === 'USD').reduce((total: number, pago: any) => total + Number(pago.monto || 0), 0));
+const pagoBOBDirecto = computed(() => form.pagos.filter((pago: any) => pago.moneda === 'BOB').reduce((total: number, pago: any) => total + Number(pago.monto || 0), 0));
+const pagoEquivalenteUSD = computed(() => roundMoney(pagoUSDDirecto.value + (tipoCambio.value > 0 ? pagoBOBDirecto.value / tipoCambio.value : 0)));
+const pagoEquivalenteBOB = computed(() => roundMoney(pagoEquivalenteUSD.value * tipoCambio.value));
+const pagoExcedeSaldo = computed(() => pagoEquivalenteUSD.value > saldoRestanteUSD.value);
+const esContado = computed(() => form.tipo_pago === 'Contado');
+const esCreditoDirecto = computed(() => !esContado.value && form.tipo_credito === 'credito_directo');
+const esCreditoBancario = computed(() => !esContado.value && form.tipo_credito === 'credito_bancario');
+const montoCuotaCredito = computed(() => Number(form.numero_cuotas || 0) > 0 ? roundMoney(saldoRestanteUSD.value / Number(form.numero_cuotas || 1)) : 0);
 
 onMounted(async () => {
   await cargarReserva();
@@ -196,6 +277,8 @@ async function cargarReserva() {
     }
     reserva.value = res;
     form.monto_pago = Number(res.saldo || 0);
+    form.tipo_cambio = Number(res.tipo_cambio_usado || 0) || null;
+    form.pagos.splice(0, form.pagos.length, { ...crearPago(), monto: Number(res.saldo || 0) });
     form.metodo_pago = res.metodo_pago || 'Efectivo';
     form.id_vehiculo = res.id_vehiculo || null;
     if (res.tipo_reserva === 'pedido' && !res.id_vehiculo) {
@@ -215,9 +298,16 @@ async function completarReserva() {
     toast.add({ severity: 'warn', summary: 'Registre o seleccione el vehiculo importado', life: 4000 });
     return;
   }
-  const saldo = Number(reserva.value.saldo || 0);
-  if (Number(form.monto_pago || 0) !== saldo) {
-    toast.add({ severity: 'warn', summary: 'Debe pagar el saldo completo', detail: `Saldo pendiente: $ ${formatPrecio(saldo)}`, life: 4000 });
+  if (tipoCambio.value <= 0) {
+    toast.add({ severity: 'warn', summary: 'Ingrese tipo de cambio', life: 3000 });
+    return;
+  }
+  if (esContado.value) {
+    if (pagoEquivalenteUSD.value !== saldoRestanteUSD.value || form.pagos.some((pago: any) => !pago.moneda || !pago.metodo || Number(pago.monto || 0) <= 0)) {
+      toast.add({ severity: 'warn', summary: 'Debe completar el saldo con un detalle de pago valido', detail: `$ ${formatPrecio(saldoRestanteUSD.value)}`, life: 4000 });
+      return;
+    }
+  } else if (!validarCredito()) {
     return;
   }
 
@@ -232,13 +322,26 @@ async function completarReserva() {
     await $fetch(server.HOST + `/api/v1/ventas/${reserva.value.id}/completar-reserva`, {
       method: 'PATCH',
       body: {
-        monto_pago: Number(form.monto_pago || 0),
+        tipo_pago: form.tipo_pago.toLowerCase(),
+        tipo_cambio: tipoCambio.value,
+        pagos: esContado.value ? form.pagos.map((pago: any) => ({ moneda: pago.moneda, metodo: pago.metodo, monto: Number(pago.monto || 0) })) : [],
+        monto_pago: saldoRestanteUSD.value,
         id_usuario_pago: Number(userId || 0),
         id_vehiculo: form.id_vehiculo,
         metodo_pago: form.metodo_pago,
         estado_entrega: form.estado_entrega,
         fecha_entrega: form.fecha_entrega,
-        observacion: form.observacion
+        observacion: form.observacion,
+        tipo_credito: form.tipo_credito,
+        numero_cuotas: Number(form.numero_cuotas || 0),
+        fecha_inicio_credito: form.fecha_inicio_credito,
+        frecuencia_pago: form.frecuencia_pago,
+        tiene_respaldo: form.tiene_respaldo,
+        tipo_garantia: form.tipo_garantia,
+        documento_garantia: form.documento_garantia,
+        datos_garante: form.datos_garante,
+        referencia_bancaria: form.referencia_bancaria,
+        estado_desembolso: form.estado_desembolso
       }
     });
     toast.add({ severity: 'success', summary: 'Reserva completada', detail: 'El pago del vehiculo fue completado.', life: 3000 });
@@ -250,6 +353,31 @@ async function completarReserva() {
   } finally {
     saving.value = false;
   }
+}
+
+function validarCredito() {
+  if (!form.tipo_credito || Number(form.numero_cuotas || 0) <= 0 || !form.fecha_inicio_credito) {
+    toast.add({ severity: 'warn', summary: 'Complete los datos del credito', life: 3000 });
+    return false;
+  }
+  if (esCreditoDirecto.value && (!form.tiene_respaldo || !form.tipo_garantia.trim() || !form.datos_garante.trim())) {
+    toast.add({ severity: 'warn', summary: 'Credito directo incompleto', detail: 'Debe registrar respaldo, tipo de garantia y datos del garante.', life: 4000 });
+    return false;
+  }
+  return true;
+}
+
+function crearPago() {
+  return { key: `${Date.now()}-${Math.random().toString(36).slice(2)}`, moneda: 'USD', metodo: 'Efectivo', monto: 0 };
+}
+
+function agregarPago() {
+  form.pagos.push(crearPago());
+}
+
+function eliminarPago(index: number) {
+  form.pagos.splice(index, 1);
+  if (form.pagos.length === 0) agregarPago();
 }
 
 async function obtenerVehiculos() {
@@ -280,5 +408,9 @@ function formatPrecio(precio: number) {
 function formatFecha(fecha: string) {
   if (!fecha) return 'N/A';
   return new Date(`${fecha}T00:00:00`).toLocaleDateString('es-BO');
+}
+
+function roundMoney(value: number) {
+  return Math.round(Number(value || 0) * 100) / 100;
 }
 </script>

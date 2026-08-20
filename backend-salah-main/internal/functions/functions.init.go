@@ -25,6 +25,38 @@ func CreacionInicial() error {
 	return nil
 }
 
+func BackfillOrigenesCredito() error {
+	if err := db.GDB.Exec(`
+		update ventas_vehiculos vv
+		set origen_tipo = 'pedido',
+			origen_id = v.pedido_origen_id
+		from vehiculos v
+		where vv.id_vehiculo = v.id
+			and coalesce(vv.tipo_reserva, 'stock') = 'pedido'
+			and v.pedido_origen_id is not null
+			and (coalesce(vv.origen_tipo, '') <> 'pedido' or vv.origen_id is distinct from v.pedido_origen_id)
+	`).Error; err != nil {
+		return err
+	}
+	if err := db.GDB.Exec(`
+		update ventas_vehiculos
+		set origen_tipo = 'reserva',
+			origen_id = id
+		where tipo_venta = 'Reserva'
+			and (coalesce(origen_tipo, '') <> 'reserva' or origen_id is distinct from id)
+	`).Error; err != nil {
+		return err
+	}
+	return db.GDB.Exec(`
+		update ventas_vehiculos
+		set origen_tipo = 'venta',
+			origen_id = id
+		where coalesce(tipo_reserva, 'stock') <> 'pedido'
+			and tipo_venta <> 'Reserva'
+			and (coalesce(origen_tipo, '') = '' or origen_id is null)
+	`).Error
+}
+
 func Roles() error {
 	if err := db.GDB.Model(&models.Rol{}).
 		Where("nombre = ?", "ventas").

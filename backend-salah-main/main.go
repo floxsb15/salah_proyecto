@@ -49,15 +49,9 @@ func main() {
 			&models.Usuario{},
 			&models.Cliente{},
 			&models.Vehiculo{},
-			&models.ProveedorAuto{},
-			&models.CompraAuto{},
-			&models.PagoCompraAuto{},
-			&models.ProformaVehicular{},
 			&models.VentaVehiculo{},
 			&models.PagoVenta{},
 			&models.CuotaCredito{},
-			&models.PedidoVehiculo{},
-			&models.PagoPedidoVehiculo{},
 			&models.GastoVario{},
 			&models.Movimiento{},
 		); err != nil {
@@ -66,6 +60,9 @@ func main() {
 
 		if err := functions.CreacionInicial(); err != nil {
 			log.Fatal("Error al iniciar los datos predeterminados: ", err)
+		}
+		if err := functions.BackfillOrigenesCredito(); err != nil {
+			log.Fatal("Error al completar origenes de creditos: ", err)
 		}
 		if err := security.MigratePlaintextPasswords(); err != nil {
 			log.Fatal("Error al migrar contrasenas heredadas: ", err)

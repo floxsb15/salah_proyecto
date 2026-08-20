@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -43,5 +44,27 @@ func TestUsernameThrottleDoesNotPreventPasswordVerificationFromAnotherIP(t *test
 	}
 	if !store.failure("203.0.113.10", "admin@example.com") {
 		t.Fatal("invalid attempt for throttled username was not identified")
+	}
+}
+
+func TestParseLoginCredentialsAcceptsFormBody(t *testing.T) {
+	request := httptest.NewRequest("POST", "/api/v1/login", strings.NewReader("usuario=admin&contra=secret"))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	credentials, err := parseLoginCredentials(request)
+	if err != nil {
+		t.Fatalf("parseLoginCredentials() error = %v", err)
+	}
+	if credentials.Usuario != "admin" || credentials.Contra != "secret" {
+		t.Fatalf("parseLoginCredentials() = %#v", credentials)
+	}
+}
+
+func TestParseLoginCredentialsRejectsMalformedJSON(t *testing.T) {
+	request := httptest.NewRequest("POST", "/api/v1/login", strings.NewReader(`{"usuario":`))
+	request.Header.Set("Content-Type", "application/json")
+
+	if _, err := parseLoginCredentials(request); err == nil {
+		t.Fatal("parseLoginCredentials() error = nil")
 	}
 }

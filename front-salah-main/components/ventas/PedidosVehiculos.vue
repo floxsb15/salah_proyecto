@@ -23,7 +23,7 @@
         <p class="text-2xl font-bold text-gray-900">{{ filteredPedidos.length }}</p>
       </div>
       <div class="rounded-lg border border-gray-200 bg-white p-4">
-        <p class="text-sm text-gray-500">En trÃ¡nsito</p>
+        <p class="text-sm text-gray-500">En aduana</p>
         <p class="text-2xl font-bold text-gray-900">{{ pedidosEnTransito }}</p>
       </div>
       <div class="rounded-lg border border-gray-200 bg-white p-4">
@@ -88,7 +88,14 @@
       </Column>
       <Column field="estado" header="Estado" sortable>
         <template #body="slotProps">
-          <Tag :value="estadoPedidoLabel(slotProps.data.estado)" :severity="estadoPedidoSeverity(slotProps.data.estado)" />
+          <div class="flex items-center gap-2">
+            <Tag :value="estadoPedidoLabel(slotProps.data.estado)" :severity="estadoPedidoSeverity(slotProps.data.estado)" />
+            <i
+              v-if="vehiculoNoDisponible(slotProps.data)"
+              class="pi pi-lock text-amber-600"
+              title="Vehiculo no disponible para venta hasta completar el pedido"
+            ></i>
+          </div>
         </template>
       </Column>
       <Column field="fecha_vencimiento" header="Vence" sortable>
@@ -99,7 +106,7 @@
           <div class="flex items-center gap-1">
             <Button
               v-if="normalizarEstadoUI(slotProps.data.estado) === 'Pedido registrado'"
-              label="En trÃ¡nsito"
+              label="Aduana"
               icon="pi pi-send"
               size="small"
               severity="info"
@@ -108,7 +115,7 @@
               @click="marcarEnTransito(slotProps.data)"
             />
             <Button
-              v-if="slotProps.data.estado !== 'Recibido' && slotProps.data.estado !== 'Completado'"
+              v-if="esEstadoTransito(slotProps.data.estado)"
               label="Recibir"
               icon="pi pi-box"
               size="small"
@@ -117,7 +124,7 @@
               @click="router.push({ path: recibirPath, query: { id: slotProps.data.id } })"
             />
             <Button
-              v-if="slotProps.data.estado === 'Recibido'"
+              v-if="esEstadoRecibido(slotProps.data.estado) && Number(slotProps.data.saldo_pendiente_usd || 0) > 0"
               label="Completar"
               icon="pi pi-check"
               size="small"
@@ -192,12 +199,16 @@
           <InputNumber id="precio_estimado_usd" v-model="form.precio_estimado_usd" mode="currency" currency="USD" locale="es-BO" :min="0" fluid size="small" />
         </div>
         <div class="flex flex-col gap-1">
+          <label for="adelanto_modo">Tipo de adelanto</label>
+          <Select id="adelanto_modo" v-model="form.adelanto_modo" :options="modosAdelanto" option-label="label" option-value="value" fluid size="small" />
+        </div>
+        <div class="flex flex-col gap-1">
           <label for="adelanto_porcentaje">Adelanto %</label>
-          <InputNumber id="adelanto_porcentaje" v-model="form.adelanto_porcentaje" :min="0" :max="100" suffix=" %" fluid size="small" />
+          <InputNumber id="adelanto_porcentaje" v-model="form.adelanto_porcentaje" :min="0" :max="100" suffix=" %" :disabled="form.adelanto_modo !== 'porcentaje'" fluid size="small" />
         </div>
         <div class="flex flex-col gap-1">
           <label for="adelanto_requerido_usd">Adelanto requerido USD</label>
-          <InputNumber id="adelanto_requerido_usd" v-model="form.adelanto_requerido_usd" mode="currency" currency="USD" locale="es-BO" :min="0" :disabled="Number(form.adelanto_porcentaje || 0) > 0" fluid size="small" />
+          <InputNumber id="adelanto_requerido_usd" v-model="form.adelanto_requerido_usd" mode="currency" currency="USD" locale="es-BO" :min="0" :disabled="form.adelanto_modo === 'porcentaje'" fluid size="small" />
         </div>
 
         <section class="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2">
@@ -216,25 +227,30 @@
             <Button icon="pi pi-trash" severity="danger" text rounded type="button" aria-label="Eliminar pago" @click="eliminarPago(index)" />
           </div>
 
-          <p v-if="pagoExcedeAdelanto" class="text-sm font-semibold text-red-600">El pago supera el adelanto requerido.</p>
+          <p v-if="pagoMenorAdelanto" class="text-sm font-semibold text-red-600">El pago debe ser igual o mayor al adelanto requerido.</p>
+          <p v-else-if="pagoExcedeAdelanto" class="text-sm font-semibold text-amber-600">El pago supera el adelanto requerido.</p>
         </section>
 
         <div class="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-gray-50 p-3 lg:col-span-2 md:grid-cols-4">
           <div>
             <span class="text-xs font-semibold uppercase text-gray-500">Precio estimado</span>
             <strong class="block text-gray-900">$ {{ formatPrecio(form.precio_estimado_usd) }}</strong>
+            <span class="block text-xs text-gray-500">Bs {{ formatPrecio(precioEstimadoBOB) }}</span>
           </div>
           <div>
             <span class="text-xs font-semibold uppercase text-gray-500">Adelanto requerido</span>
             <strong class="block text-gray-900">$ {{ formatPrecio(adelantoRequeridoUSD) }}</strong>
+            <span class="block text-xs text-gray-500">Bs {{ formatPrecio(adelantoRequeridoBOB) }}</span>
           </div>
           <div>
             <span class="text-xs font-semibold uppercase text-gray-500">Adelanto Bs</span>
             <strong class="block text-gray-900">Bs {{ formatPrecio(adelantoRequeridoBOB) }}</strong>
+            <span class="block text-xs text-gray-500">$ {{ formatPrecio(adelantoRequeridoUSD) }}</span>
           </div>
           <div>
             <span class="text-xs font-semibold uppercase text-gray-500">Saldo estimado</span>
             <strong class="block text-gray-900">$ {{ formatPrecio(saldoEstimadoUSD) }}</strong>
+            <span class="block text-xs text-gray-500">Bs {{ formatPrecio(saldoEstimadoBOB) }}</span>
           </div>
         </div>
 
@@ -245,7 +261,7 @@
 
         <div class="flex justify-end gap-2 border-t border-gray-100 pt-4 lg:col-span-2">
           <Button label="Cancelar" severity="secondary" type="button" @click="pedidoVisible = false" />
-          <Button label="Registrar pedido" icon="pi pi-check" type="submit" :loading="saving" />
+          <Button label="Registrar pedido" icon="pi pi-check" type="submit" :loading="saving" :disabled="pagoMenorAdelanto" />
         </div>
       </form>
     </Dialog>
@@ -324,6 +340,10 @@ const searchQuery = ref('');
 const changingStateId = ref<number | null>(null);
 const monedasPago = ref(['USD', 'BOB']);
 const metodosPago = ref(['Efectivo', 'QR', 'Transferencia', 'Tarjeta']);
+const modosAdelanto = ref([
+  { label: 'Porcentaje del precio', value: 'porcentaje' },
+  { label: 'Monto manual USD', value: 'manual' }
+]);
 
 const form = reactive({
   id_cliente: null as number | null,
@@ -338,8 +358,9 @@ const form = reactive({
   precio_estimado_usd: 0,
   tipo_cambio: null as number | null,
   fecha_llegada_estimada: '',
+  adelanto_modo: 'porcentaje',
   adelanto_requerido_usd: 0,
-  adelanto_porcentaje: 0,
+  adelanto_porcentaje: 10,
   pagos: [crearPago()],
   observacion: ''
 });
@@ -375,9 +396,10 @@ const filteredPedidos = computed(() => {
   );
 });
 const tipoCambio = computed(() => Number(form.tipo_cambio || 0));
+const precioEstimadoBOB = computed(() => roundMoney(Number(form.precio_estimado_usd || 0) * tipoCambio.value));
 const adelantoRequeridoUSD = computed(() => {
   const porcentaje = Number(form.adelanto_porcentaje || 0);
-  if (porcentaje > 0) {
+  if (form.adelanto_modo === 'porcentaje' && porcentaje > 0) {
     return roundMoney(Number(form.precio_estimado_usd || 0) * porcentaje / 100);
   }
   return Number(form.adelanto_requerido_usd || 0);
@@ -388,17 +410,19 @@ const pagoBOBDirecto = computed(() => form.pagos.filter((pago: any) => pago.mone
 const pagoEquivalenteUSD = computed(() => roundMoney(pagoUSDDirecto.value + (tipoCambio.value > 0 ? pagoBOBDirecto.value / tipoCambio.value : 0)));
 const pagoEquivalenteBOB = computed(() => roundMoney(pagoEquivalenteUSD.value * tipoCambio.value));
 const pagoExcedeAdelanto = computed(() => pagoEquivalenteUSD.value > adelantoRequeridoUSD.value);
+const pagoMenorAdelanto = computed(() => roundMoney(pagoEquivalenteUSD.value) < roundMoney(adelantoRequeridoUSD.value));
 const saldoEstimadoUSD = computed(() => Math.max(roundMoney(Number(form.precio_estimado_usd || 0) - pagoEquivalenteUSD.value), 0));
+const saldoEstimadoBOB = computed(() => roundMoney(saldoEstimadoUSD.value * tipoCambio.value));
 const totalAdelantos = computed(() => filteredPedidos.value.reduce((total: number, pedido: any) => total + totalPagadoUSD(pedido), 0));
 const totalPendiente = computed(() => filteredPedidos.value.reduce((total: number, pedido: any) => total + Number(pedido.saldo_pendiente_usd || 0), 0));
-const pedidosEnTransito = computed(() => filteredPedidos.value.filter((pedido: any) => normalizarEstadoUI(pedido.estado) === 'En trÃ¡nsito').length);
+const pedidosEnTransito = computed(() => filteredPedidos.value.filter((pedido: any) => esEstadoTransito(pedido.estado)).length);
 
 onMounted(async () => {
   await cargarDatos();
 });
 
-watch(() => form.adelanto_porcentaje, () => {
-  if (Number(form.adelanto_porcentaje || 0) > 0) {
+watch([() => form.adelanto_porcentaje, () => form.precio_estimado_usd, () => form.adelanto_modo], () => {
+  if (form.adelanto_modo === 'porcentaje') {
     form.adelanto_requerido_usd = adelantoRequeridoUSD.value;
   }
 });
@@ -472,7 +496,7 @@ async function registrarPedido() {
         tipo_cambio: tipoCambio.value,
         fecha_llegada_estimada: form.fecha_llegada_estimada,
         adelanto_requerido_usd: adelantoRequeridoUSD.value,
-        adelanto_porcentaje: Number(form.adelanto_porcentaje || 0),
+        adelanto_porcentaje: form.adelanto_modo === 'porcentaje' ? Number(form.adelanto_porcentaje || 0) : 0,
         pagos: form.pagos.map((pago: any) => ({
           moneda: pago.moneda,
           metodo: pago.metodo,
@@ -495,8 +519,8 @@ async function registrarPedido() {
 async function marcarEnTransito(pedido: any) {
   changingStateId.value = pedido.id;
   try {
-    await $fetch(server.HOST + `/api/v1/pedidos/${pedido.id}/transito`, { method: 'PATCH' });
-    toast.add({ severity: 'success', summary: 'Pedido marcado en trÃ¡nsito', life: 3000 });
+    await $fetch(server.HOST + `/api/v1/pedidos/${pedido.id}/aduana`, { method: 'PATCH' });
+    toast.add({ severity: 'success', summary: 'Pedido marcado en aduana', life: 3000 });
     await obtenerPedidos();
   } catch (err: any) {
     console.error(err);
@@ -527,8 +551,8 @@ function validarPedido() {
     toast.add({ severity: 'warn', summary: 'Complete moneda, tipo de pago y monto en cada fila', life: 4000 });
     return false;
   }
-  if (pagoExcedeAdelanto.value) {
-    toast.add({ severity: 'warn', summary: 'Pago mayor al adelanto requerido', life: 3000 });
+  if (pagoMenorAdelanto.value) {
+    toast.add({ severity: 'warn', summary: 'Pago insuficiente', detail: 'El pago debe ser igual o mayor al adelanto requerido', life: 4000 });
     return false;
   }
   return true;
@@ -595,8 +619,9 @@ function resetForm() {
     precio_estimado_usd: 0,
     tipo_cambio: null,
     fecha_llegada_estimada: '',
+    adelanto_modo: 'porcentaje',
     adelanto_requerido_usd: 0,
-    adelanto_porcentaje: 0,
+    adelanto_porcentaje: 10,
     observacion: ''
   });
   form.pagos.splice(0, form.pagos.length, crearPago());
@@ -612,10 +637,13 @@ function totalPagadoUSD(pedido: any) {
 }
 
 function normalizarEstadoUI(estado: string) {
+  const plano = estadoPlano(estado);
+  if (plano.includes('aduana') || plano.includes('transito')) return 'En aduana';
   return String(estado || '').replace('En transito', 'En tránsito').replace('trÃ¡nsito', 'tránsito');
 }
 
 function estadoPedidoLabel(estado: string) {
+  if (normalizarEstadoUI(estado) === 'En aduana') return 'En aduana';
   return normalizarEstadoUI(estado) === 'En tránsito' ? 'En tránsito' : estado;
 }
 
@@ -623,6 +651,8 @@ function estadoPedidoSeverity(estado: string) {
   switch (normalizarEstadoUI(estado)) {
     case 'Pedido registrado':
       return 'secondary';
+    case 'En aduana':
+      return 'info';
     case 'En tránsito':
       return 'info';
     case 'Recibido':
@@ -632,6 +662,28 @@ function estadoPedidoSeverity(estado: string) {
     default:
       return 'secondary';
   }
+}
+
+function estadoPlano(estado: string) {
+  return String(estado || '')
+    .replace('trÃƒÂ¡nsito', 'transito')
+    .replace('trÃ¡nsito', 'transito')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function esEstadoTransito(estado: string) {
+  const normalizado = estadoPlano(estado);
+  return normalizado.includes('aduana') || normalizado.includes('transito');
+}
+
+function esEstadoRecibido(estado: string) {
+  return estadoPlano(estado) === 'recibido';
+}
+
+function vehiculoNoDisponible(pedido: any) {
+  return estadoPlano(pedido.estado) !== 'completado';
 }
 
 function formatPrecio(precio: number) {

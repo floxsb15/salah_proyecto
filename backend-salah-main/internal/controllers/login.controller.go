@@ -23,13 +23,8 @@ var dummyPasswordHash = func() string {
 
 func (auth) AuthLoginWeb(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
-	var credentials struct {
-		Usuario string `json:"usuario"`
-		Contra  string `json:"contra"`
-	}
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&credentials); err != nil {
+	credentials, err := parseLoginCredentials(r)
+	if err != nil {
 		http.Error(w, "Solicitud no valida", http.StatusBadRequest)
 		return
 	}
@@ -59,25 +54,25 @@ func (auth) AuthLoginWeb(w http.ResponseWriter, r *http.Request) {
 	if existing.SessionVersion == 0 {
 		existing.SessionVersion = 1
 		if err := db.GDB.Model(&existing).UpdateColumn("session_version", existing.SessionVersion).Error; err != nil {
-			http.Error(w, "No se pudo iniciar sesion", http.StatusInternalServerError)
+			respondInternalError(w, "actualizar version de sesion al iniciar sesion", err)
 			return
 		}
 	}
 
 	var role models.Rol
 	if err := db.GDB.Where("id = ?", existing.IDRol).First(&role).Error; err != nil {
-		http.Error(w, "No se pudo iniciar sesion", http.StatusInternalServerError)
+		respondInternalError(w, "obtener rol al iniciar sesion", err)
 		return
 	}
 	normalizedRole := strings.ToLower(strings.TrimSpace(role.Nombre))
-	if normalizedRole != "admin" && normalizedRole != "encargado de ventas" && normalizedRole != "vendedor" {
+	if normalizedRole != "admin" && normalizedRole != "encargado de ventas" && normalizedRole != "vendedor" && normalizedRole != "contador" {
 		authAttempts.failure(ip, credentials.Usuario)
 		http.Error(w, "Credenciales incorrectas", http.StatusUnauthorized)
 		return
 	}
 	token, csrfToken, err := security.IssueToken(existing.ID, existing.SessionVersion)
 	if err != nil {
-		http.Error(w, "No se pudo iniciar sesion", http.StatusInternalServerError)
+		respondInternalError(w, "emitir token al iniciar sesion", err)
 		return
 	}
 	authAttempts.success(ip, credentials.Usuario)
@@ -96,6 +91,32 @@ func (auth) AuthLoginWeb(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response)
+}
+
+type loginCredentials struct {
+	Usuario string `json:"usuario"`
+	Contra  string `json:"contra"`
+}
+
+func parseLoginCredentials(r *http.Request) (loginCredentials, error) {
+	contentType := strings.ToLower(r.Header.Get("Content-Type"))
+	if strings.HasPrefix(contentType, "application/x-www-form-urlencoded") || strings.HasPrefix(contentType, "multipart/form-data") {
+		if err := r.ParseForm(); err != nil {
+			return loginCredentials{}, err
+		}
+		return loginCredentials{
+			Usuario: r.FormValue("usuario"),
+			Contra:  r.FormValue("contra"),
+		}, nil
+	}
+
+	var credentials loginCredentials
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&credentials); err != nil {
+		return loginCredentials{}, err
+	}
+	return credentials, nil
 }
 
 func respondLoginFailure(w http.ResponseWriter, ip, username string) {

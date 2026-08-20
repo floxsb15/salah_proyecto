@@ -50,6 +50,7 @@ type VehiculoDAO struct {
 	Asientos           *uint    `json:"asientos"`
 	Garantia           string   `json:"garantia"`
 	Equipamiento       string   `json:"equipamiento"`
+	PedidoOrigenID     *uint    `json:"pedido_origen_id"`
 }
 
 type VehiculoMOD struct {
@@ -78,6 +79,7 @@ type VehiculoMOD struct {
 	Asientos           *uint    `json:"asientos"`
 	Garantia           string   `json:"garantia"`
 	Equipamiento       string   `json:"equipamiento"`
+	PedidoOrigenID     *uint    `json:"pedido_origen_id"`
 }
 
 func construirNombreVehiculo(marca string, modelo string, anio uint) string {
@@ -284,13 +286,7 @@ func ObtenerVehiculo(w http.ResponseWriter, r *http.Request) {
 func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(20 << 20)
 	if err != nil {
-		http.Error(w, "Error al parsear el formulario", http.StatusInternalServerError)
-		return
-	}
-
-	direccionImagen, imagenesGuardadas, err := guardarImagenesVehiculo(r, true)
-	if err != nil {
-		http.Error(w, "Imagen no valida", http.StatusBadRequest)
+		http.Error(w, "Solicitud multipart no valida", http.StatusBadRequest)
 		return
 	}
 
@@ -333,6 +329,39 @@ func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "Numero de asientos no valido", http.StatusBadRequest)
 		return
+	}
+	pedidoOrigenID, err := parseOptionalUintFormValue(r.FormValue("pedido_origen_id"))
+	if err != nil {
+		http.Error(w, "Pedido de origen no valido", http.StatusBadRequest)
+		return
+	}
+
+	direccionImagen, imagenesGuardadas, err := guardarImagenesVehiculo(r, pedidoOrigenID == nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if pedidoOrigenID != nil {
+		var existentes int64
+		if err := db.GDB.Model(&models.Vehiculo{}).Where("pedido_origen_id = ?", *pedidoOrigenID).Count(&existentes).Error; err != nil {
+			http.Error(w, "No se pudo validar pedido de origen", http.StatusInternalServerError)
+			return
+		}
+		if existentes > 0 {
+			http.Error(w, "El pedido ya tiene un vehiculo creado", http.StatusBadRequest)
+			return
+		}
+		var pedido models.PedidoVehiculo
+		if err := db.GDB.Where("id = ?", *pedidoOrigenID).First(&pedido).Error; err != nil {
+			http.Error(w, "Pedido de origen no encontrado", http.StatusBadRequest)
+			return
+		}
+		if !estadoPedidoPermiteRecepcion(pedido.Estado) || pedido.IDVehiculo != nil {
+			http.Error(w, "Solo se puede crear vehiculo para pedidos en aduana sin vehiculo vinculado", http.StatusBadRequest)
+			return
+		}
+		nuevoEstado = false
 	}
 	modelo := strings.TrimSpace(r.FormValue("modelo"))
 	marca := strings.TrimSpace(r.FormValue("marca"))
@@ -380,6 +409,7 @@ func AgregarVehiculo(w http.ResponseWriter, r *http.Request) {
 		Asientos:           asientos,
 		Garantia:           r.FormValue("garantia"),
 		Equipamiento:       r.FormValue("equipamiento"),
+		PedidoOrigenID:     pedidoOrigenID,
 	}
 
 	tx := db.GDB.Begin()

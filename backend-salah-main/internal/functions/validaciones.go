@@ -9,7 +9,7 @@ func ActualizarEstado(estado string) (bool, error) {
 	switch estado {
 	case "Activo":
 		return true, nil
-	case "Inactivo":
+	case "Inactivo", "No disponible", "Reservado":
 		return false, nil
 	default:
 		return false, fmt.Errorf("error al actualizar estado")
